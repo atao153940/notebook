@@ -1,0 +1,965 @@
+
+
+信息来源：1-5来自github的代码介绍、官方的帮助文档；6-9来自书本"ROS机器人开发实践"的笔记；
+
+
+
+【1】.cartographer_ROS，安装编译
+【2】.cartographer，示例bag运行 
+【3】.cartographer，lua配置文件
+【4】.cartographer，典型launch文件说明
+【5】.cartographer，类似launch文件说明
+
+【6】.cartographer，使用rplidar（cartographer有关launch文件）
+【7】.cartographer，使用rplidar（lua配置文件）
+【8】.cartographer，使用rplidar（运行使用）
+【9】.cartographer，杂
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+【1】.Cartographer_ROS，安装编译
+	1.杂
+	    说明：Cartographer有两个版本，使用ROS的和不使用ROS的；
+	    关于cartographer：2016年10月，谷歌开源的slam方案；可以实现2d和3d激光雷达的slam；设计目的是在计算资源有限的情况下，实时取得精度较高的2d地图；优化方法， 因为考虑基于粒子滤波器方法在较大环境中对内存和计算资源要求较高，所以采用图网络的优化方法；
+	    关于安装：cartographer虽然已经和ROS集成，但是还没有提供二进制的安装包，所以暂时不能使用apt-get方式安装，需要自行编译源码安装；
+	    输入输出信息总结（猜测）：好像是，输入信息为，激光雷达扫描数据topic（/scan），里程计数据topic（odom），激光雷达坐标系到基坐标系的tf消息；虽然在参数服务器设置中，有各种参数，但没有详细描述；
+
+
+
+
+	1.系统要求
+	    推荐配置：64位CPU（如i7）；16G内存；Ubuntu18.04（Bionic），20.04（Focal）；gcc6.3.0，7.5.0，9.3.0；Cartographer可以运行在其他环境中，但上述环境是推荐的；
+	    已知问题：32位系统，会造成libeigen的对齐问题，造成系统崩溃；（32-bit builds have libeigen alignment problems）
+	    推荐的ROS环境：Kinetic，Melodic，Noetic（这三个ROS版本是目前支持的，不支持其他版本）
+
+
+	2.ROS依赖包安装
+	    说明：需要安装wstool（类似rosws，rosbuild的工作空间初始化工具），rosdep，Ninja（用于加快编译？）
+
+	    对于Noetic版本：
+	        sudo apt-get update
+	        sudo apt-get install -y python3-wstool python3-rosdep ninja-build stow
+	        小疑问：stow是软件包？
+
+	    对于Kinetic，Melodic版本：
+	        sudo apt-get update
+	        sudo apt-get install -y python-wstool python-rosdep ninja-build stow
+
+
+
+	3.创建工作空间，rosinstall文件
+	    mkdir catkin_ws
+	    cd catkin_ws
+	    wstool init src
+	        说明：使用wstool init命令初始化后，自动在src文件夹下生成点rosinstall文件；点rosinstall文件是隐藏文件，可以通过"ls -a"查看；
+
+	    wstool merge -t src https://raw.githubusercontent.com/cartographer-project/cartographer_ros/master/cartographer_ros.rosinstall
+	        1.说明：上述语句把网站上的"cartographer_ros.rosinstall"文件内容加入到本地的点rosinstall文件中；上述命令需要在"~/catkin_ws"路径下执行，因为"src"参数表示使用"当前路径/src"这个路径下的点rosinstall文件；
+	        2.vpn问题：上述网址需要vpn才能连接到，否则报错，"urlopen error [Error 111] Connection refused"；处理方法，使用vpn，或者已知上述"cartographer_ros.rosinstall"文件的内容如下，可以直接使用"sudo gedit .rosinstall"命令打开文件，加入如下内容即可；
+- git: {local-name: cartographer, uri: 'https://github.com/cartographer-project/cartographer.git', version: 'master'}
+- git: {local-name: cartographer_ros, uri: 'https://github.com/cartographer-project/cartographer_ros.git', version: 'master'}
+	        3.rosinstall文件格式：（不确定，信息来源，百度搜索），上述点rosinstall文件的格式，百度写法还可以如下，不确定；
+- git:
+    local-name: cartographer
+    uri: https://github.com/cartographer-project/cartographer.git
+    version: 1.0.0
+
+- git:
+    local-name: cartographer_ros
+    uri: https://github.com/cartographer-project/cartographer_ros.git
+    version: 1.0.0
+
+
+	        4.rosinstall文件内容：（不确定，信息来源，百度搜索），百度搜索，有说上述"wstool merge -t src xxx"命令执行后，点rosinstall文件中包括3个git的信息，分别是"cartographer"、"cartographer_ros"、"ceres-solver"；其中"ceres-solver"的地址默认是"https://ceres-solver.googlesource.com/ceres-solver.git"，而这个网址需要vpn连接，所以需要修改为"https:/github.com/ceres-solver/ceres-solver.git"，所以修改后完整的rosinstall文件内容如下；
+- git:
+    local-name: cartographer
+    uri: https://github.com/cartographer-project/cartographer.git
+    version: 1.0.0
+
+- git:
+    local-name: cartographer_ros
+    uri: https://github.com/cartographer-project/cartographer_ros.git
+    version: 1.0.0
+
+- git:
+    local-name: ceres-solver
+    uri: https:/github.com/ceres-solver/ceres-solver.git
+    version: 1.13.0
+
+
+
+
+	4.下载源码
+	    wstool update -t src
+	    小疑问：好像是根据点rosinstall文件的git信息，去下载源码；上述命令运行后，src文件夹中包括3个新的文件夹，分别，"cartographer"、"cartographer_ros"、"ceres-solver"；
+
+
+
+
+
+	4.安装依赖项
+	    sudo rosdep init
+	        说明：如果在安装ROS时候，运行过该命令，此处会报错，但可以忽略，继续往下；
+
+	    rosdep update
+	    rosdep install --from-paths src --ignore-src --rosdistro=${ROS_DISTRO} -y
+	        小疑问：使用rosdep安装依赖项，意思是前面的xxx.rosinstall文件制定了该项目所需的依赖项吗？
+
+	    补充：对于Ubuntu16/ROS Kinetic版本，可以使用如下命令替代上面的多个命令；src/cartographer/scripts/install_proto3.sh
+
+
+	5.安装absel-cpp
+	    安装：src/cartographer/scripts/install_abseil.sh
+	    如果有版本冲突，可以使用以下命令先卸载，再安装：sudo apt-get remove ros-${ROS_DISTRO}-abseil-cpp
+
+
+	6.编译与安装
+	    catkin_make_isolated --install --use-ninja
+	    小疑问：在上述步骤中，wstool好像只是下载了xxx.rosintall文件，没有下载完整源代码；则意思下载源代码是上述编译安装的catkin_make_ioslated步骤中进行？
+
+
+	7.安装问题举例
+	    问题：在安装过程中，ceres-solver的下载服务器无法连接；
+	    处理：编辑".rosinstall"文件，将ceres-solver下载地址修改为"https://github.com/ceres-solver/ceres-solver.git"；具体步骤为，使用命令编辑".rosinstall"文件，"gedit catkin_ws/src/.rosinstall"；对"local-name: ceres-solver"项中的"url"修改，值修改为"https://github.com/ceres-solver/ceres-solver.git"；
+
+
+
+
+
+
+
+
+
+
+
+【2】.cartographer，示例bag运行
+	说明：下面示例中，下载的bag文件默认存放位置是~/Downloads；各启动文件launch中，包含roscore和rivz的启动；在每个终端使用前，需要使用source命令，即source install_isolated/setup.bash；如果使用的shell工具是zsh，则使用source install_isolated/setup.zsh；
+
+	1.测试demo，德意志博物馆数据
+	    2d建图定位
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_2d/cartographer_paper_deutsches_museum.bag
+
+	        roslaunch cartographer_ros demo_backpack_2d.launch bag_filename:=${HOME}/Downloads/cartographer_paper_deutsches_museum.bag
+
+	    3d建图定位：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_3d/with_intensities/b3-2016-04-05-14-14-00.bag
+
+	        roslaunch cartographer_ros demo_backpack_3d.launch bag_filename:=${HOME}/Downloads/b3-2016-04-05-14-14-00.bag
+
+
+	2.测试demo，Revo低成本雷达数据
+	    wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/revo_lds/cartographer_paper_revo_lds.bag
+	    roslaunch cartographer_ros demo_revo_lds.launch bag_filename:=${HOME}/Downloads/cartographer_paper_revo_lds.bag
+	    说明：revo低成本雷达与rplidar比较类似，配置文件之类可以参考；
+
+
+	3.测试demo，PR2数据
+	    说明：数据从Willow Garage公司的PR2机器人上搜集；
+	    wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/pr2/2011-09-15-08-32-46.bag
+	    roslaunch cartographer_ros demo_pr2.launch bag_filename:=${HOME}/Downloads/2011-09-15-08-32-46.bag
+	    说明：在PR2机器人的demo中，不仅仅激光雷达的数据，还包括Camera的topic，可以在rviz软件中，再添加一个camera插件，可以看到建图过程对应的实时画面；
+
+
+	4.测试demo，Taurob机器人
+	    wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/taurob_tracker/taurob_tracker_simulation.bag
+	    roslaunch cartographer_ros demo_taurob_tracker.launch bag_filename:=${HOME}/Downloads/taurob_tracker_simulation.bag
+
+
+
+	5.测试demo，纯粹定位，2d数据包
+	    说明：分两个步骤，步骤1根据数据包1建图，步骤2使用数据包2，对系统所在位姿定位；
+
+	    1.下载数据包
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_2d/b2-2016-04-05-14-44-52.bag
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_2d/b2-2016-04-27-12-31-41.bag
+	        说明：第一个bag用于建图，第二个bag用于定位，数据都来自德意志博物馆；
+
+	    2.建图步骤
+	        roslaunch cartographer_ros offline_backpack_2d.launch bag_filenames:=${HOME}/Downloads/b2-2016-04-05-14-44-52.bag
+	        说明：等该步骤完成后，再进行下一步定位；
+
+	    3.定位步骤
+	        roslaunch cartographer_ros demo_backpack_2d_localization.launch \
+   load_state_filename:=${HOME}/Downloads/b2-2016-04-05-14-44-52.bag.pbstream \
+   bag_filename:=${HOME}/Downloads/b2-2016-04-27-12-31-41.bag
+	        小疑问：导入建图数据包对应的xxx.bag.pbstream作用？定位的结果是直接显示在rviz，没有保存下来吗
+
+
+
+	6.测试demo，纯粹定位，3d数据包
+	    说明：分两个步骤，步骤1根据数据包1建图，步骤2使用数据包2，对系统所在位姿定位；
+
+	    1.下载数据包
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_3d/b3-2016-04-05-13-54-42.bag
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_3d/b3-2016-04-05-15-52-20.bag
+	        说明：数据包来自德意志博物馆；
+
+	    2.建图步骤
+	        roslaunch cartographer_ros offline_backpack_3d.launch bag_filenames:=${HOME}/Downloads/b3-2016-04-05-13-54-42.bag
+
+	    3.定位步骤
+	        roslaunch cartographer_ros demo_backpack_3d_localization.launch \
+   load_state_filename:=${HOME}/Downloads/b3-2016-04-05-13-54-42.bag.pbstream \
+   bag_filename:=${HOME}/Downloads/b3-2016-04-05-15-52-20.bag
+
+
+
+
+
+
+
+
+
+
+
+【3】.cartographer，lua配置文件
+	说明：仍然不是使用传感器数据实时运行，是使用自己录制的bag文件；
+
+	1.验证bag数据包
+	    命令：cartographer_rosbag_validate -bag_filename your_bag.bag
+	    说明：在使用自己录制的bag文件前，可以使用Cartographer提供的验证工具进行检验；
+	    常见错误举例（不详细，仅记录）：如果sensor_msgs/Imu这个topic删除了，那么要保证gravity vector没有从IMU measurement中删除？因为这个量将用来判断地面的方向；（小疑问，topic删除了，就是不使用Imu数据，那么怎么会保留topic中的某个量）
+	    常见错误举例（不详细，仅记录）：如果使用Velodyna激光雷达，对于sensor_msgs/PointClouds2这个topic的点云数据，推荐以每个UDP包进行一次发送，而不是激光雷达转每圈进行发送；就是意思有利于校正机器人自身运动造成的激光数据变形（意思是validate验证工具，不仅仅会报错error，还可以提示改进info）
+
+
+	2.修改lua配置文件
+	    说明：lua语言的点lua文件，用于配置参数；launch文件用于启动各个节点；lua配置文件位置，源文件中，src/cartographer_ros/cartographer_ros/configuration_files；lua配置文件位置，在安装后的文件中，install_isolated/share/cartographer_ros/configuration_files；（小疑问，安装是指安装在当前catkin_ws文件夹下吗，与build，devel，src并列的install_isloated文件夹？）；
+
+	    推荐使用的标准lua配置：
+	        1.使用2d SLAM时候：cp install_isolated/share/cartographer_ros/configuration_files/backpack_2d.lua install_isolated/share/cartographer_ros/configuration_files/my_robot.lua
+
+	        2.使用3d SLAM时候：cp install_isolated/share/cartographer_ros/configuration_files/backpack_3d.lua install_isolated/share/cartographer_ros/configuration_files/my_robot.lua
+
+
+	    具体参数1：举例"backpack_2d.lua"文件，options中的参数都是前端有关；include进入的其他lua配置文件（包括，"map_builder.lua"，"trajectory_builder.lua"）都是与后端的建图优化等有关；在lua文件中，MAP_BUILDER.use_trajectory_builder_2d，其中"MAP_BUILDER"变量是在"map_builder.lua"文件中定义的，此处意思是重新赋值；
+
+	    具体参数2：map_frame = "map", tracking_frame = "base_link", published_frame = "base_link", odom_frame = "odom"
+	        说明：不详细，TF Frame的ID，根据自己环境指定？好像是，上述TF树的Frame可以由两种方式指定；方式1是在自己录制的bag文件的/tf这个topic中，根据这个topic指定的frame名去设置上述变量；方式2是在.urdf配置文件中指定，然后相应的修改上述变量；
+
+	    具体参数3：不详细，与使用的传感器数量有关；
+	        num_laser_scans = 0，使用的sensor_msgs/LaserScan这个topic的数量有关（小疑问，什么传感器吗？）；在backpack_2d.lua文件中，取值0；在backpack_3d.lua文件中，取值0；
+	        num_multi_echo_laser_scans = 1，使用的sensor_msgs/MultiEchoLaserScan这个topic的数量有关（小疑问，未知传感器？），在backpack_2d.lua文件中，取值1；在backpack_3d.lua文件中，取值0；
+	        num_point_clouds = 0，使用的sensor_msgs/PointCloud2这个topic的数量有关（小疑问，未知传感器？）；在backpack_2d.lua文件中，取值0；在backpack_3d.lua文件中，取值2；
+
+
+	    具体参数4：use_nav_sat = false，同时使用GPS数据定位；use_landmarks = false，同时使用landmark定位（小疑问，什么landmark？）
+	        小疑问：不详细，上述开关打开后，其他配套的操作步骤没有说明；
+
+
+	    具体参数5：
+	        TRAJECTORY_BUILDER_3D.num_accumulated_range_data
+	        TRAJECTORY_BUILDER_2D.num_accumulated_range_data
+	        说明：这两个参数指定激光雷达获得一次完整的扫描（通常是转一圈），需要采集的点云个数；对于2d参数，在backpack_2d.lua文件中取值10；对于3d参数，在backpack_3d.lua文件中取值160；
+	        说明：不详细，如果有2个激光雷达，可以同时获得一次完整的扫描（通常是转一圈），则该参数应该指定为2？
+
+	    具体参数6：其他参数推荐不修改；
+
+
+
+
+
+
+
+
+
+【4】.cartographer，典型launch文件说明
+	说明：launch文件用于启动整个slam所需的各个node，同时调用对应的lua配置文件；源代码中launch文件位置，src/cartographer_ros/cartographer_ros/launch；安装后文件中launch文件位置，install_isolated/share/cartographer_ros/launch；
+
+
+	1.backpack_3d.launch
+	    说明：该launch文件用于使用真实传感器，进行实时的slam运行；3d建图和定位；
+	    启动节点1：
+	        node name="robot_state_publisher"
+	        pkg="robot_state_publisher"
+	        type="robot_state_publisher"
+	        说明：定位节点？
+
+	    启动节点2：
+	        node name="cartographer_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_node"
+	        定义变量，configuration_directory，默认值，$(find cartographer_ros)/configuration_files；
+	        定义变量，configuration_basename，默认值，backpack_3d.lua，即使用"backpack.lua"配置文件；
+	        小疑问，是主节点，所有使用cartographer的场景中都要启动？
+
+	    启动节点3：
+	        node name="cartographer_occupancy_grid_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_occupancy_grid_node"
+	        说明：建图节点？
+
+	    topic重映射
+	        remap from="points2_1" to="horizontal_laser_3d"
+	        remap from="points2_2" to="vertical_laser_3d"
+	        定义位置：在"cartographer_node"节点处；
+
+	    赋值变量：
+	        param name="robot_description"
+	        textfile="$(find cartographer_ros)/urdf/backpack_3d.urdf"
+	        说明：使用了backpack_3d.urdf的机器人模型；（小疑问，使用实际传感器的launch也需要使用urdf机器人模型吗）
+
+	    分析说明：包括"cartographer_node"（主节点），"robot_state_publisher"（定位节点），"cartographer_occupancy_grid_node"（建图节点）
+
+
+
+	2.demo_backpack_3d.launch
+	    说明：该文件用于测试示例demo的bag运行；德意志博物馆，3d建图定位；
+
+	    测试bag运行命令（重复）：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_3d/with_intensities/b3-2016-04-05-14-14-00.bag
+
+	        roslaunch cartographer_ros demo_backpack_3d.launch bag_filename:=${HOME}/Downloads/b3-2016-04-05-14-14-00.bag
+
+	    调用backpack_3d.launch：
+	        说明：则包括了以下启动节点，"robot_state_publisher"，"cartographer_node"（使用配置文件，backpack_3d.lua），"cartographer_occupancy_grid_node"；包括了以下变量，"robot_description"（使用了backpack_3d.urdf的机器人模型）；
+
+	    启动节点1：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        使用变量：args="-d $(find cartographer_ros)/configuration_files/demo_3d.rviz"，使用了demo_3d.rviz文件；（说明：可以先定义一个变量名，然后这个变量赋值，然后使用变量，如定义rviz_filename；此处不定义变量，直接通过args使用变量）
+
+	    启动节点2：
+	        node name="playbag"
+	        pkg="rosbag"
+	        type="play"
+	        使用变量：args="--clock $(arg bag_filename)"，使用roslaunch xxx.launch命令时传入的bag文件；
+
+
+	    变量赋值：
+	        param name="/use_sim_time"
+	        value="true"
+	        小疑问：意思只要是使用bag的仿真，都需要赋值use_sim_time变量吗
+
+	    分析说明：除了"cartographer_node"（主节点），"robot_state_publisher"（定位节点），"cartographer_occupancy_grid_node"（建图节点）以外；还包括"rviz"，"rosbag"节点；
+
+
+
+	3.offline_backpack_3d.launch
+	    说明：测试demo，3d纯粹定位，共包括2个步骤，即"建图步骤"和"定位步骤"；此处仅"建图步骤"；
+
+	    测试bag运行命令（重复）：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_3d/b3-2016-04-05-13-54-42.bag
+	        roslaunch cartographer_ros offline_backpack_3d.launch bag_filenames:=${HOME}/Downloads/b3-2016-04-05-13-54-42.bag
+
+	    启动节点1：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        定义变量：no_rviz，该变量默认是false，即默认启动上述节点的；可以在roslaunch命令后设置该变量，如roslaunch xxx no-rviz:=true
+	        定义变量：arg name="rviz_config"，默认值，"$(find cartographer_ros)/configuration_files/demo_3d.rviz"/>
+
+
+	    启动节点2：
+	        node name="cartographer_occupancy_grid_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_occupancy_grid_node"
+	        定义变量：no_rviz，默认值，"false"，即默认启动上述节点的；可以在roslaunch命令后设置该变量，如roslaunch xxx no-rviz:=true
+	        使用变量：args="-resolution 0.05"
+
+
+	    启动节点3：
+	        node name="cartographer_offline_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_offline_node"
+	        定义变量：bag_filenames，在roslaunch命令后指定，内容是使用的bag包的地址
+	        定义变量：configuration_directory="$(find cartographer_ros)/configuration_files"
+	        定义变量：configuration_basenames="backpack_3d.lua"，即使用backpack_3d.lua配置文件
+	        定义变量：urdf_filenames="$(find cartographer_ros)/urdf/backpack_3d.urdf"，即使用backpack_3d.urdf的机器人模型；
+	        定义变量：launch-prefix=""；
+
+
+	    变量赋值：
+	        param name="/use_sim_time"
+	        value="true"
+
+	    topic重映射：
+	        remap from="points2_1" to="horizontal_laser_3d"
+	        remap from="points2_2" to="vertical_laser_3d"
+	        说明：重映射语句位置，没有放在某个node的启动命令中，放在外部；
+
+	    分析说明：只有"cartographer_offline_node"（主节点），"cartographer_occupancy_grid_node"（建图节点）；没有定位节点；额外增加了"rviz"节点；
+
+
+
+	4.demo_backpack_3d_localization.launch
+	    说明：测试demo，3d纯粹定位，共包括2个步骤，即"建图步骤"和"定位步骤"；此处仅"定位步骤"；
+
+	    测试bag运行命令（重复）：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/backpack_3d/b3-2016-04-05-15-52-20.bag
+	        roslaunch cartographer_ros demo_backpack_3d_localization.launch \
+   load_state_filename:=${HOME}/Downloads/b3-2016-04-05-13-54-42.bag.pbstream \
+   bag_filename:=${HOME}/Downloads/b3-2016-04-05-15-52-20.bag
+
+
+	    启动节点1：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        使用变量：args="-d $(find cartographer_ros)/configuration_files/demo_3d.rviz"，使用了demo_3d.rviz文件；（说明：可以先定义一个变量名，然后这个变量赋值，然后使用变量，如定义rviz_filename；此处不定义变量，直接通过args使用变量）
+
+	    启动节点2：
+	        node name="playbag"
+	        pkg="rosbag"
+	        type="play"
+	        使用变量：args="--clock $(arg bag_filename)"，使用roslaunch xxx.launch命令时传入的bag文件；
+
+
+	    启动节点3：
+	        node name="robot_state_publisher"
+	        pkg="robot_state_publisher"
+	        type="robot_state_publisher"
+
+	    启动节点4：
+	        node name="cartographer_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_node"
+	        定义变量，configuration_directory，默认值，$(find cartographer_ros)/configuration_files；
+	        定义变量，configuration_basename，默认值，backpack_3d.lua，即使用"backpack_3d.lua"配置文件；
+	        定义变量：load_state_filename，需要在roslaunch启动命令中赋值；
+
+
+	    启动节点5：
+	        node name="cartographer_occupancy_grid_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_occupancy_grid_node"
+
+
+	    topic重映射
+	        remap from="points2_1" to="horizontal_laser_3d"
+	        remap from="points2_2" to="vertical_laser_3d"
+	        定义位置：在"cartographer_node"节点处；
+
+	    变量赋值1：
+	        param name="robot_description"
+	        textfile="$(find cartographer_ros)/urdf/backpack_3d.urdf"
+	        说明：使用了backpack_3d.urdf的机器人模型；（小疑问，使用实际传感器的launch也需要使用urdf机器人模型吗）
+
+
+	    变量赋值2：
+	        param name="/use_sim_time"
+	        value="true"
+	        小疑问：意思只要是使用bag的仿真，都需要赋值use_sim_time变量吗
+
+
+	    分析说明：内容与demo_backpack_3d.launch几乎相同，即使用bag文件的正常3d定位建图；启动节点说明，除了"cartographer_node"（主节点），"robot_state_publisher"（定位节点），"cartographer_occupancy_grid_node"（建图节点）以外；还包括"rviz"，"rosbag"节点；
+
+	    与demo_backpack_3d.luanch差异点：在"cartographer_node"节点中，使用了"demo_backpack_3d_localization.lua"配置文件，而不是"demo_backpack_3d.lua"配置文件；同时，在"cartographer_node"节点中，还定义了"load_state_filename"变量，在roslaunch xxx load_state_filename=:xxx方式赋值；
+
+	    关于load_state_filename变量：（没看懂，仅记录，来自官方教程），load_state_filename argument pointing to a .pbstream recording of a previous Cartographer execution. The previous recording will be used as a pre-computed map and Cartographer will only perform localization on this map.
+
+
+
+	5.assets_writer_backpack_3d.launch
+	    说明：官方教程中说明该launch文件作用如下，没看懂，仅记录，is used to extract data out of a .pbstream recording of a previous Cartographer execution；其中pbstream文件在"测试demo，3d纯粹定位，定位步骤"中使用到，作用未知，使用到的命令如下；roslaunch cartographer_ros demo_backpack_3d_localization.launch \
+   load_state_filename:=xxx.bag.pbstream \
+   bag_filename:=xxx.bag
+
+	    启动节点：
+	        node name="cartographer_assets_writer"
+	        pkg="cartographer_ros" 
+	        type="cartographer_assets_writer"
+	        定义变量，configuration_directory，默认值，$(find cartographer_ros)/configuration_files；
+	        定义变量，configuration_basename，默认值，assets_writer_backpack_3d.lua
+	        定义变量，urdf_filename，默认值，$(find cartographer_ros)/urdf/backpack_3d.urdf
+	        定义变量，bag_filenames，默认值，$(arg bag_filenames)，可能是启动命令中需要输入，roslaunch xxx bag_filenames:=xxx.pbstream
+	        定义变量，pose_graph_filename，默认值，$(arg pose_graph_filename)，可能是启动命令中需要输入，roslaunch xxx pose_graph_filename=xxx
+
+
+	6.知识点
+	    1.关于配置文件位置：在没有编译安装时，系统的配置文件都位于catkin_ws/src/cartographer_ros/xxx路径下，所以这两个变量的地址分别是，configuration_directory，默认值，$(find cartographer_ros)/configuration_files；urdf_filename，默认值，$(find cartographer_ros)/urdf/xxx.urdf；在编译安装后，系统的配置文件都位于catkin_ws/install_ioslated/share/cartographer_ros/xxx路径下，所以上述两个变量地址应该是，configuration_directory，默认值，~/catkin_ws/install_ioslated/share/cartographer_ros/configuration_files；urdf_filename，默认值，~/catkin_ws/install_ioslated/share/cartographer_ros/urdf/backpack_3d.urdf；
+	        说明：好像是这样，不详细；
+
+	    2.关于tf（不详细，仅记录）：如果使用/tf，那么可以去掉launch文件中的变量"robot_description"，节点"robot_state_publisher"，所有"-urdf"有关的字符串；
+
+	    3.传感器的topic名重映射
+	        说明：真实传感器，或者bag文件发布的惯导，点云的topic名需要使用规定名称，如果实际发布的topic名与规定不同，则需要使用remap方式重映射topic名；
+	        IMU的topic规定名称：imu
+	        sensor_msgs/LaserScan的topic规定名称：scan；如果有多个，依次命名为scan_1，scan_2
+	        sensor_msgs/MultiEchoLaserScan的topic规定名称：echoes；如果有多个，依次命名为echoes_1，echoes_2
+	        sensor_msgs/PointCloud2的topic规定名称：points2；如果有多个，依次命名为points2_1，points2_2
+	        小疑问：不清楚各个topic之间的区别？
+
+	    4.关于launch中定义的变量（不确定）：在launch文件中定义的变量，好像都可以在启动命令中赋值，如果没有赋值，则使用launch文件中的默认值；如roslaunch xxx bag_filename=xxx
+
+
+
+
+
+
+
+
+
+【5】.cartographer，类似launch文件说明
+	1.assets_writer_backpack_2d.launch
+	    说明：与assets_writer_backpack_3d.launch类似；
+	    区别："cartographer_assets_writer"节点中，"configuration_basename"变量，使用"assets_writer_backpack_2d.lua"；"urdf_filename"变量，使用"backpack_2d.urdf"
+
+
+	2.assets_writer_ros_map.launch
+	    说明：与assets_writer_backpack_3d.launch类似；
+	    区别："cartographer_assets_writer"节点中，"configuration_basename"变量，使用"assets_writer_ros_map.lua"；"urdf_filename"变量，使用"backpack_2d.urdf"
+
+
+	3.backpack_2d.launch
+	    说明：与"backpack_2d.launch"类似；
+	    区别：
+	        变量赋值，"robot_description"，使用"backpack_2d.urdf"
+	        节点"cartographer_node"，使用
+"configuration_basename"变量，使用"backpack_2d.lua"
+节点"cartographer_occupancy_grid_node"，添加参数args="-resolution 0.05"
+	        topic名重映射修改为，remap from="echoes" to="horizontal_laser_2d"
+
+
+	4.demo_backpack_2d.launch
+	    说明：与"demo_backpack_2d.launch"类似；
+	    区别：
+	        变量赋值，"robot_description"，使用"backpack_2d.urdf"
+	        节点"cartographer_node"，使用
+"configuration_basename"变量，使用"backpack_2d.lua"
+节点"cartographer_occupancy_grid_node"，添加参数args="-resolution 0.05"；节点"rviz"，使用"demo_2d.rviz"；
+	        topic名重映射修改为，remap from="echoes" to="horizontal_laser_2d"
+
+
+	5.demo_backpack_2d_localization.launch
+	    说明：与"demo_backpack_3d_localization.launch"类似；
+	    区别：
+	        变量"robot_description"，使用"backpack_2d.urdf"
+	        节点"cartographer_node"，变量"configuration_basename"，使用"backpack_2d_localization.lua"；节点"cartographer_occupancy_grid_node"，新增变量args="-resolution 0.05"
+	        topic名重映射改为，remap from="echoes" to="horizontal_laser_2d"
+
+
+	6.offline_backpack_2d.launch
+	    说明：与"offline_backpack_3d.launch"类似；
+	    区别：
+	        节点"rviz"，使用"demo_2d.rviz"；节点"cartographer_offline_node"，变量"configuration_basenames"，使用"backpack_2d.lua"，变量"urdf_filenames"，使用"backpack_2d.urdf"；
+	        topic重映射修改，remap from="echoes" to="horizontal_laser_2d"
+
+
+	7.demo_pr2.launch
+	    说明：数据从Willow Garage公司的PR2机器人上搜集；
+	    demo测试命令：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/pr2/2011-09-15-08-32-46.bag
+	        roslaunch cartographer_ros demo_pr2.launch bag_filename:=${HOME}/Downloads/2011-09-15-08-32-46.bag
+
+	    启动节点1：
+	        node name="cartographer_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_node"
+	        定义变量：configuration_directory，默认值，$(find cartographer_ros)/configuration_files
+	        定义变量：configuration_basename，默认值，pr2.lua
+
+	    启动节点2：
+	        node name="cartographer_occupancy_grid_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_occupancy_grid_node"
+	        使用变量：args="-resolution 0.05"
+
+	    启动节点3：
+	        node name="tf_remove_frames"
+	        pkg="cartographer_ros"
+	        type="tf_remove_frames.py"
+
+	    启动节点4：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        使用变量：args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" 
+
+	    启动节点5：
+	        node name="playbag"
+	        pkg="rosbag"
+	        type="play"
+	        使用变量：args="--clock $(arg bag_filename)"，即在roslaunch命令中定义输入的bag文件；
+
+	    topic名重映射：
+	        remap from="scan" to="/base_scan"；定义位置，节点"cartographer_node"中；
+	        remap from="tf_out" to="/tf"；定义位置，节点"tf_remove_frames"中；
+	        remap from="tf" to="tf_in"，定义位置，节点"playbag"中；
+
+	    变量赋值：
+	        param name="/use_sim_time"
+	        value="true"
+
+	    没看懂的部分：
+	        rosparam param="remove_frames"
+	        说明：定义位置，节点"tf_remove_frames"中；
+
+	    分析说明：类似"demo_backpack_3d.launch"；区别，在该文件中，启动节点"tf_remove_frames"；在"demo_backpack_3d.launch"中，替换成节点"robot_state_publisher"；
+
+
+
+	8.demo_revo_lds.launch
+	    说明：测试demo，Revo低成本雷达数据
+	    demo测试命令：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/revo_lds/cartographer_paper_revo_lds.bag
+	        roslaunch cartographer_ros demo_revo_lds.launch bag_filename:=${HOME}/Downloads/cartographer_paper_revo_lds.bag
+
+
+	    启动节点1：
+	        node name="cartographer_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_node"
+	        定义变量：configuration_directory，默认值，$(find cartographer_ros)/configuration_files
+	        定义变量：configuration_basename，默认值，revo_lds.lua
+
+	    启动节点2：
+	        node name="cartographer_occupancy_grid_node" 
+	        pkg="cartographer_ros"
+	        定义变量："cartographer_occupancy_grid_node"，默认值，"-resolution 0.05"
+
+	    启动节点3：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        使用变量：args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz"
+
+	    启动节点4：
+	        node name="playbag"
+	        pkg="rosbag"
+	        type="play"
+	        使用变量：args="--clock $(arg bag_filename)"
+
+	    变量赋值：
+	        param name="/use_sim_time"
+	        value="true"
+
+	    topic名重映射：
+	        remap from="scan" to="horizontal_laser_2d"，定义位置，节点"cartographer_node"中；
+
+	    分析说明：与"demo_backpack_3d.launch"类似（即使用bag数据的3d定位建图）；区别，缺少"robot_state_publisher"节点；
+
+
+
+	9.demo_taurob_tracker.launch
+	    说明：测试demo，Taurob机器人
+	    demo测试命令：
+	        wget -P ~/Downloads https://storage.googleapis.com/cartographer-public-data/bags/taurob_tracker/taurob_tracker_simulation.bag
+	        roslaunch cartographer_ros demo_taurob_tracker.launch bag_filename:=${HOME}/Downloads/taurob_tracker_simulation.bag
+
+	    启动节点1：
+	        node name="cartographer_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_node"
+	        定义变量：configuration_directory，默认值，$(find cartographer_ros)/configuration_files
+	        定义变量：configuration_basename，默认值，taurob_tracker.lua
+
+
+	    启动节点2：
+	        node name="cartographer_occupancy_grid_node" 	        pkg="cartographer_ros"
+	        type="cartographer_occupancy_grid_node"
+	        使用变量：args="-resolution 0.05"
+
+
+	    启动节点3：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        使用变量：args="-d $(find cartographer_ros)/configuration_files/demo_3d.rviz"
+
+
+	    启动节点4：
+	        node name="playbag"
+	        pkg="rosbag"
+	        type="play"
+	        使用变量：args="--clock $(arg bag_filename)"
+
+	    变量赋值：
+	        param name="/use_sim_time"
+	        value="true"
+
+	    topic名重映射
+	        remap from="scan" to="/spin_laser/scan"
+	        remap from="imu" to="/imu/data"
+	        说明：定义位置，节点"cartographer_node"中；
+
+	    分析说明：与"demo_backpack_3d.launch"类似（即使用bag数据的3d定位建图）；区别，缺少"robot_state_publisher"节点；
+
+
+
+	10.grpc_demo_backpack_2d.launch
+	    启动节点1：
+	        node name="robot_state_publisher"
+	        pkg="robot_state_publisher"
+	        type="robot_state_publisher"
+
+	    启动节点2：
+	        node name="cartographer_grpc_server"
+	        pkg="cartographer_ros"
+	        type="cartographer_grpc_server.sh"
+	        使用变量：configuration_directory，默认值，$(find cartographer_ros)/configuration_files
+	        使用变量：configuration_basename，默认值，backpack_2d_server.lua
+
+
+	    启动节点3：
+	        node name="cartographer_grpc_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_grpc_node"
+	        定义变量：client_id，默认值，CLIENT_ID；小疑问，这个值是rosluanch命令启动时候给定吗，还是其他地方定义
+	        定义变量：configuration_directory，默认值，$(find cartographer_ros)/configuration_files
+	        定义变量：configuration_basename，默认值，backpack_2d.lua
+
+
+	    启动节点4：
+	        node name="playbag"
+	        pkg="rosbag"
+	        type="play"
+	        使用变量：args="--clock $(arg bag_filename)"
+
+
+	    启动节点5：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        使用变量：args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz"
+
+
+	    变量赋值1：
+	        param name="/use_sim_time"
+	        value="true"
+
+	    变量赋值2：
+	        param name="robot_description"
+	        textfile="$(find cartographer_ros)/urdf/backpack_2d.urdf"
+
+	    topic名重映射
+	        remap from="echoes" to="horizontal_laser_2d"；定义位置，在节点"cartographer_grpc_node"中；
+
+
+	    分析说明：与"demo_backpack_3d.launch"对比，与包含通用的"robot_state_publisher"，"playbag"，"rviz"节点；"cartographer_grpc_node"节点则类似"cartographer_node"节点；缺少建图节点，增加了"cartographer_grpc_server"节点；小疑问，是否该启动文件用于服务器？多个设备共同建图定位之类吗
+
+
+
+	11.grpc_demo_backpack_2d_localization.launch
+	    分析说明：与"grpc_demo_backpack_2d.launch"类似；同样作用未知；
+	    区别：缺少"cartographer_grpc_server"节点；在"cartographer_grpc_node"节点中，增加"map_filename"，默认值，"$(arg map_filename)"；小疑问，从哪里取值吗，在roslaunch命令启动时候给定吗
+
+
+	12.其他文件
+	    taurob_tracker.launch：在"demo_taurob_tracker.launch"文件中调用，故已经在上述文件的笔记中讲解；
+
+	    offline_node.launch：在"offline_backpack_2d.launch"文件和"offline_backpack_3d.launch"文件中调用，故已经在上述文件的笔记中讲解；
+
+
+	13.visualize_pbstream.launch
+	    启动节点1：
+	        node name="rviz"
+	        pkg="rviz"
+	        type="rviz"
+	        变量使用：args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz"
+
+	    启动节点2：
+	         node name="cartographer_node"
+	        pkg="cartographer_ros"
+	        type="cartographer_node"
+	        定义变量：configuration_directory $(find cartographer_ros)/configuration_files
+	        定义变量：configuration_basename visualize_pbstream.lua
+	        定义变量：load_frozen_state=false；小疑问，作用未知；
+	        定义变量：start_trajectory_with_default_topics=false；小疑问，作用未知；
+	        定义变量：load_state_filename $(arg pbstream_filename)；在roslaunch xxx xxx.pbstream命令中指定文件；
+
+	    分析说明（不确定）：上面"demo_backpack_3d_localization.launch"和"demo_backpack_2d_localization.launch"启动文件，在使用roslaunch命令时，需要输入pbstream文件；此处是否是专门查看这个pbstream文件所用的；
+
+
+
+
+
+
+
+
+
+
+【6】.cartographer，使用rplidar（cartographer有关launch文件）
+	说明：Revo LDS的低成本激光雷达与rplidar非常类似，所以下面将Revo LDS的demo改成使用rplidar的文件；
+
+	1.cartographer_demo_rplidar.launch文件
+	    说明：参考"demo_revo_lds.launch"文件修改，修改后文件名，"cartographer_demo_rplidar.launch"，内容如下：
+
+<launch>
+    <param name="/use_sim_time" value="true"/>
+
+    <node name="cartographer_node" pkg="cartographer_node" type="cartographer_node" args="-configuration_directory $(find cartographer_ros)/configuration_files -configuration_basename rplidar.lua" output="screen">
+        <remap from="scan" to="scan"/>
+    </node>
+
+
+    <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz"/>
+
+</launch>
+
+	    说明："demo_revo_lds.launch"文件中启动的节点包括，"cartographer_node"、"rviz"、"cartographer_occupancy_grid_node"、"playbag"；此处"cartographer_demo_rplidar.launch"文件中，缺少了"cartographer_occupancy_grid_node"节点，原因未知；缺少"playbag"节点，因为使用gazebo仿真或者真实MRobot来发布输入topic；
+	    小疑问：cartographer需要输入的信息和输出的信息未知；输入信息猜测是否如下，激光雷达扫描数据（/scan，topic消息）、激光雷达坐标系到基坐标系的变换（scan frame->base_link，tf变换）、里程计信息（odom->base_link，tf变换）；输出信息，地图信息（topic消息？），自身位置（tf消息？map->base_link）；
+
+
+
+
+
+
+
+
+
+【7】.cartographer，使用rplidar（lua配置文件）
+
+	1.rplidar.lua
+	    说明：配置文件使用"rplidar.lua"，该文件通过"revo_lds.lua"修改而来，文件内容如下；
+
+include "map_builder.lua"
+include "trajectory_builder.lua"
+
+options={
+    map_builder=MAP_BUILDER,
+    trajectory_builder=TRAJECTORY_BUILDER,
+    map_frame="map",
+    tracking_frame="laser_link",
+    published_frame="laser_link",
+    odom_frame="odom",
+    provide_odom_frame=true,
+    use_odometry=false,
+    num_laser_scans=1,
+    num_multi_echo_laser_scans=0,
+    num_subdivisions_per_laser_scan=1,
+    num_point_clouds=0,
+    loopup_transform_timeout_sec=0.2,
+    submap_publish_period_sec=0.3,
+    pose_publish_period_sec=5e-3,
+    trajectory_publish_period_sec=30e-3,
+    rangefinder_sampling_ratio=1.,
+    odometry_sampling_ratio=1.,
+    imu_sampling_ratio=1.,
+}
+
+MAP_BUILDER.use_trajectory_builder_2d=true;
+
+TRAJECTORY_BUILDER_2D.submaps.num_range_data=35
+TRAJECTORY_BUILDER_2D.min_range=0.3
+TRAJECTORY_BUILDER_2D.max_range=8.
+TRAJECTORY_BUILDER_2D.missing_data_ray_length=1.
+TRAJECTORY_BUILDER_2D.use_imu_data=false
+TRAJECTORY_BUILDER_2D.use_online_correlative_scan_matching=true
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.linear_search_window=0.1
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.translation_delta_cost_weight=10.
+TRAJECTORY_BUILDER_2D.real_time_correlative_scan_matcher.rotation_delta_cost_weight=1e-1
+
+SPARSE_POSE_GRAPH.optimization_problem.huber_scale=1e2
+SPARSE_POSE_GRAPH.optimize_every_n_scans=35
+SPARSE_POSE_GRAPH.constraint_builder.min_score=0.65
+
+return options
+
+	    说明：每次修改lua文件后，需要重新编译才能生效，"catkin_make_isolated --install --use-ninja"；小疑问，前面其他方案好像使用的是yaml文件，使用rosparam命令可以一次读取多个参数服务器参数（如果使用param只能逐个参数配置）；使用参数服务器方式好像是每次运行程序时，实时更新参数数值，所以修改后不需要编译；
+
+
+
+
+
+
+
+
+
+
+【8】.cartographer，使用rplidar（运行使用）
+	1.gazebo中仿真
+	    roslaunch mrobot_gazebo mrobot_laser_nav_gazebo.launch
+	    roslaunch cartographer_ros cartographer_demo_rplidar.launch
+	    roslaunch mrobot_teleop mrobot_teleop.launch
+	    说明，mrobot_lasr_nav_gazebo：该launch文件启动的节点包括，"joint_state_publisher"、"robot_state_publisher"、"gazebo_spawner"，其他整个"empty_world.launch"中包括的文件；可以发布gmapping所需的3个信息，"里程计tf消息、激光雷达的topic数据、激光雷达坐标系到基坐标系的tf消息"；同时订阅键盘输入的vel_cmd这个topic，控制小车运动；
+	    说明，cartographer_demo_rplidar：该launch文件启动的节点包括，"cartographer_node"、"rviz"；小疑问，不清楚"cartographer_node"节点输入输出信息是怎样；
+	    说明，mrobot_teleop：该launch文件启动的节点功能，猜测是接收键盘输入，发布的vel_cmd这个topic上；
+	    功能说明：使用键盘可以控制机器人在gazebo仿真器上移动；同时rviz界面上，会显示建立出的实时地图；在控制机器人移动的过程中，地图会以一种渐变的形式由浅到深出现（小疑问，由深到浅吗），随着机器人的移动，建立完成的地图会逐渐呈现白色；地图中蓝色轨迹是机器人的移动路线，在机器人围绕环境运动一圈后，还有部分地图没有完全变成白色，可以移动机器人到这些位置，继续完善地图；
+
+	    rosservice call /finish_trajectory "map"
+	    说明：由于cartographer创建的地图与gmaping、hector_slam的格式不同，需要使用该命令保存地图；
+
+
+
+	2.MRobot上运行
+	    roslaunch mrobot_bringup mrobot_with_laser.launch（树莓派上）
+	    roslaunch cartographer_ros cartographer_demo_rplidar.launch（PC上）
+	    roslaunch mrobot_teleop mrobot_teleop.launch（PC上）
+	    说明，mrobot_with_laser文件：启动节点包括，
+"mrobot_bringup"、"rplidar.launch"文件中的各节点、"static_transform_publisher"、"robot_pose_ekf"、"joint_state_publisher"、"robot_state_publisher"；可以发布gmapping所需的3个信息，"里程计tf消息、激光雷达的topic数据、激光雷达坐标系到基坐标系的tf消息"；同时订阅键盘输入的vel_cmd这个topic，控制小车运动；
+
+
+
+
+
+
+
+
+【9】.cartographer，杂
+	1.杂
+	    1.cartographer由2部分组成；第一部分，local-SLAM（frontend，local trajectory builder），作用是生成submap；第二部分，global-SLAM（backend），作用是合并submap；
+
+	    2.lua配置文件，local-SLAM的配置文件在如下
+install_isolated/share/cartographer/configuration_files/trajectory_builder_2d.lua（2D建图时使用） install_isolated/share/cartographer/configuration_files/trajectory_builder_3d.lua（3D建图时使用）
+
+	    3.lua配置文件，global-SLAM的配置文件在如下
+install_isolated/share/cartographer/configuration_files/pose_graph.lua
+
+include "map_builder.lua"
+include "trajectory_builder.lua"
+
+options = {
+  map_builder = MAP_BUILDER,
+  trajectory_builder = TRAJECTORY_BUILDER,
+
+//  map_frame = "map",
+//  tracking_frame = "base_link",
+//  published_frame = "base_link",
+//  odom_frame = "odom",
+
+  provide_odom_frame = true,
+  publish_frame_projected_to_2d = false,
+  use_pose_extrapolator = true,
+  use_odometry = false,
+
+//  use_nav_sat = false,
+//  use_landmarks = false,
+
+//  num_laser_scans = 0,
+//  num_multi_echo_laser_scans = 1,
+//  num_point_clouds = 0,
+
+
+  num_subdivisions_per_laser_scan = 10,
+  lookup_transform_timeout_sec = 0.2,
+  submap_publish_period_sec = 0.3,
+  pose_publish_period_sec = 5e-3,
+  trajectory_publish_period_sec = 30e-3,
+  rangefinder_sampling_ratio = 1.,
+  odometry_sampling_ratio = 1.,
+  fixed_frame_pose_sampling_ratio = 1.,
+  imu_sampling_ratio = 1.,
+  landmarks_sampling_ratio = 1.,
+}
+
+MAP_BUILDER.use_trajectory_builder_2d = true
+//  TRAJECTORY_BUILDER_2D.num_accumulated_range_data = 10
+
+return options
+
+
+
+
+
+
+
+
+
+
+
+
+
+
