@@ -1,0 +1,1354 @@
+
+
+信息来源：书本"ROS机器人开发实践"的笔记
+
+
+【1】.URDF各标签，<link>标签
+【2】.URDF各标签，<joint>标签
+【3】.URDF各标签，其他标签
+【4】.URDF功能包
+【5】.使用xacro优化URDF
+
+【6】.使用ArbotiX和rviz显示模型（没看懂，仅记录）
+【7】.ros_control（没看懂，仅记录）
+【8】.Gazebo仿真
+【9】.gazebo，摄像头仿真
+【10】.gazebo，Kinect仿真
+
+【11】.gazebo，激光雷达rplidar仿真
+【12】.摄像头标定
+【13】.使用标定参数的配置文件
+【14】.OpenCV简介
+
+
+
+
+
+
+
+
+
+
+
+【1】.URDF各标签，<link>标签
+	1.杂
+	    URDF：（Unified Robot Description Format），统一机器人描述格式，是ROS中对机器人建模的一种格式；ROS提供对URDF文件的C++解析器，可以解析URDF文件中使用XML格式描述的机器人模型；
+	    xml文件中注释内容写法：
+	        <!-- xxx -->
+
+
+	2.<link>标签
+	    说明：URDF文件使用XML格式，包含各种标签，下面分别对各种标签逐一解释说明；
+
+
+	    1.语法结构举例：
+<link name="link_name">
+    <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+	<cylinder length="0.005" radius="0.13"/>
+        </geometry>
+        <material name="yellow">
+	<color rgba="1 0.4 0 1"/>
+        </material>
+    </visual>
+
+    <inertial>
+        <mass value="2"/>
+        <origin xyz="0 0 0.0"/>
+        <inertial ixx="0.01" ixy="0.0" ixz="0.0"
+		iyy="0.01" iyz="0.0" izz="0.5"/>
+    </inertial>
+
+    <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+	<cylinder length="0.005" radius="0.13"/>
+        </geometry>
+    </collosion>
+</link>
+
+
+	    2.各部分解释，<link>
+	        <link name="link_name">
+	        xxx
+	        </link>
+	         说明：link标签用于描述刚体，比如机械臂的某个臂等；name变量用于给该link取唯一的名字；link中其他标签都位于<link>与</link>之间；link标签中的子项，对缩进没有要求，为方便查看，可以合理缩进；
+	        子标签顺序：<link>标签中，各子标签的顺序没有规定
+	        子标签是否必须存在：没有规定必须有子标签；如可以有<link name="xx"/>，作为一个完整的link标签；但一般<visual>子标签推荐存在；
+
+
+	    3.各部分解释，<visual>
+	        <visual>
+	            <origin xyz="0 0 0" rpy="0 0 0"/>
+	            <geometry>
+		    <cylinder length="0.005" radius="0.13"/>
+	            </geometry>
+	            <material name="yellow">
+		    <color rgba="1 0.4 0 1"/>
+	            </material>
+	        </visual>
+	        说明：<visual>到</visual>标签之间，用于描述机器人视觉特征；
+	        说明：<origin>标签用于描述当前link的坐标系位置；rpy刚好对应xyz轴上的逆时针旋转，rpy，roll（滚转角，x轴逆时针旋转），pitch（俯仰角，y轴逆时针旋转），y，yaw（偏航角，z轴逆时针旋转）；上述rpy旋转数据使用弧度值（180度~pi~3.14，90度~pi/2~1.57）；
+
+	        说明：<geometry>到</geometry>标签之间，用于描述机器人的几何外形（collision一般大于geometry）；常用的外形包括如下；
+		<cylinder length="xx" radius="xx"/>，radius表示半径；
+		<sphere radius="0.0165"/>，radius表示球体的半径；
+		<box size="0.01 0.01 0.07"/>；
+
+	        说明：使用现有dae模型文件，作为<geometry>标签的描述；
+		<geometry>
+		    <mesh filename="package://mrobot_description/meshes/kinect.dae"/>
+		</geometry>
+
+	        说明：<material>和</material>标签之间，用于描述颜色；rgba变量分别表示红色、绿色、蓝色、透明度（0表示完全透明，1表示不透明）；小疑问，name变量可以随便取值吗；常用颜色举例，name="yellow"，rgba="1 0.4 0 1"；name="gray"，rgba="0.75 0.75 0.75 1"；name="white"，rgba="1 1 1 0.9"；name="black"，rgba="0 0 0 0.95"；
+	        说明：<material name="black"/>；有的地方，没有列出<material>标签的子标签，只给出的name变量值；小疑问，那么实际显示的是什么颜色吗；
+
+
+	    4.各部分解释，<inertial>
+	        <inertial>
+	            <mass value="2"/>
+	            <origin xyz="0 0 0.0"/>
+	            <inertial ixx="0.01" ixy="0.0" ixz="0.0"
+			iyy="0.01" iyz="0.0" izz="0.5"/>
+	        </inertial>
+	        说明：link的惯性部分设置，如果是规则物体，可以通过尺寸质量等公式计算得到惯性矩阵；"mass value"变量是物体的质量，单位kg；"inertial"变量是物体的惯性矩阵；"origin xyz"变量未知，是物体的重心吗，那惯性矩阵不是已经包含重心有关的信息了；
+
+
+	    5.各部分解释，<collision>
+	        <collision>
+	            <origin xyz="0 0 0" rpy="0 0 0"/>
+	            <geometry>
+		    <cylinder length="0.005" radius="0.13"/>
+	            </geometry>
+	        </collision>
+	        说明：<collision>部分与<visual>部分类似，碰撞检测的<collision>区域一般大于等于<visual>区域，只要<collision>区域相交，就认为发生碰撞；<visual>标签内可以显示复杂的机器人外观，但是为了减少碰撞检测的计算量，<collision>标签往往使用简化后的机器人模型；
+
+
+
+
+
+
+
+
+
+
+
+
+
+【2】.URDF各标签，<joint>标签
+	1.<joint>标签
+	    说明：joint用于描述机器人的关节的运动学和动力学属性；用于连接两个link；
+	    语法结构举例：
+<joint name="joint_name" type="type_name">
+    <parent link="parent_link_name"/>
+    <child link="child_link_name"/>
+
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+
+    <axis xyz="0 1 0"/>
+
+    <calibration.../>
+    <dynamics damping.../>
+    <limit effort.../>
+    <satefy_controller.../>
+    ...
+</joint>
+
+
+	    2.各部分解释，<joint name="joint_name" type="type_name">...</joint>
+	        说明：joint标签中的其他属性，都放在<joint>和</joint>标签之内；name变量是给joint取名，要求具有唯一性；type变量是joint的类型，包括如下几种可用的关节类型；
+	        "continuous"：旋转关节，可以围绕单轴无限旋转（如轮子的轴）
+	        "revolute"：旋转关节，类似与"continuous"，但旋转角度有限（如机械臂的关节）
+	        "prismatic"：滑动关节，沿某一轴线移动的关节，有位置极限（如登高车的伸缩臂）
+	        "floating"：浮动关节，允许旋转平移运动（小疑问，意思是"continuous"和"primatic"的组合吗）
+	        "fixed"：固定关节，两个link之间的固定连接（如，凳子腿）
+	        "planar"：平面关节，允许在平面正交方向上平移或旋转（小疑问，没看懂）
+
+
+	    3.各部分解释，<parent link="xx"/>，<child link="xx"/>
+	        说明：joint用于连接两个link，上面分别指定两个link的名字；两个link（parent，child link）的顺序不能交换，因为与其他参数有关；
+
+	    4.各部分解释，<origin xyz="0 0 0" rpy="0 0 0"/>
+	        说明：用于指定两个link坐标系之间的变换信息；以"parent link"为原点，进行上述origin的旋转平移后，变成"child link"的坐标原点；
+
+
+	    5.各部分解释，<axis xyz="0 1 0"/>
+	        说明：用于指定"child frame"可以绕哪个轴转动（即origin变量把"parent frame"变换到"child frame"，然后axis变量指定变换的坐标系可以绕该坐标系的哪个轴转动）；仅当joint类型为"continuous"、"revolute"、"floating"时可用；
+
+
+	    4.各部分解释，<calibration>
+	        说明：关节的参考位置，用于校准关节的绝对位置
+
+
+	    5.各部分解释，<dynamics>
+	        说明：用于描述关节的物理属性，如阻尼值，物理静摩擦力等，经常在动力学仿真中用到；
+
+
+	    6.各部分解释，<limit>
+	        说明：用于描述运动的一些极限，如关节的上下限制位置，速度限制，力矩限制等；（下面是一个举例，没看懂）
+<limit lower="0.0" upper="1.0" effort="10.0" xx="5.0"/>
+
+
+	    7.各部分解释，<mimic>
+	        说明：用于描述该关节与已有关节的关系；
+
+
+	    8.各部分解释，<safety_controller>
+	        说明：用于描述安全控制器参数；（下面是一个举例，没看懂）
+<safety_controller k_position="100" k_velocity="10" soft_lower_limit="0.1" soft_upper_limit="0.9"/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+【3】.URDF各标签，其他标签
+	1.<robot>标签
+	    说明：<robot>是机器人模型部分的最顶层标签，<link>和<joint>标签都需要位于<robot>标签内（小疑问，好像只有link和joint需要吗）
+
+	    语法格式举例：
+<robot name="robot_name">
+    <link> ... </link>
+    <link> ... </link>
+    <joint> ... </joint>
+    <joint> ... </joint>
+</robot>
+
+
+
+	2.<gazebo>标签
+	    说明：用于描述机器人模型在Gazebo这个软件中仿真时，需要的一些参数（包括机器人的材料属性，Gazebo插件等）；该标签不是必须的，只有在Gazebo仿真时才需要（比如在rviz中显示机器人模型就不需要，是专门针对Gazebo软件的）；
+	    标签位置（不确定）：该标签好像位于<robot>, </robot>标签之外；与<robot>标签是同一级；
+	    语法格式举例：
+<gazebo reference="link_1">
+    <material>Gazebo/Black</material>
+</gazebo>
+
+
+
+	3.xml版本
+	    <?xml version="1.0" ?>
+	    说明（不确定）：因为URDF文件使用xml格式文本，所以在文件最开头需要这一行，指定使用的xml版本；
+
+
+
+
+
+
+
+
+
+
+【4】.URDF功能包
+	1.创建URDF功能包
+	    说明：与代码的功能包类似，URDF仿真模型也是通过单独的功能包来创建（小疑问，好像不是在某c++的功能包中加URDF模型，而是创建单独的功能包）；取名，URDF功能包一般取名<robot_name>_description，如"mrobot_description"
+
+	    1.创建功能包命令：
+	        catkin_create_pkg mrobot_description urdf xacro
+	        说明：与其他创建功能包命令相同，使用"catkin_create_pkg"命令；上述创建的"mrobot_description"功能包依赖于"urdf"和"xacro"功能包；
+
+	    2.包含文件夹：
+	        说明：上述创建的功能包包含"urdf"，"meshes"，"launch"，"config"文件夹；（小疑问，为何没有src文件夹吗，是因为依赖"urdf"，"xacro"，所以没有src文件夹吗）
+
+	        urdf文件夹：用于存放机器人模型的URDF文件，或xacro文件
+	        meshes文件夹：用于存放URDF文件中引用的模型渲染文件（即机器人的外形描述，dae文件）
+	        launch文件夹：启动文件
+	        config文件夹：rviz的配置文件
+
+
+
+	2.URDF有关工具
+	    1.安装
+	        sudo apt-get install liburdfdom-tools
+	        说明：一些与URDF有关的工具，可以通过上述命令安装；
+
+	    2.check_urdf命令
+	        check_urdf mrotot_chassis.urdf
+	        说明：该工具可以解析URDF文件，并显示解析过程中发现的错误；如果一切正常，会在终端显示"Successfully Parsed XML"
+
+	    3.urdf_to_graphiz命令
+	        urdf_to_graphiz mrobot_chassis.urdf
+	        说明：执行该命令后，会在当前目录下生成一个pdf文件；打开该文件，可以看到整个模型的结构图；
+
+
+
+	3.可视化URDF的功能包
+	    1.说明：上述是使用URDF文件对mrobot机器人进行建模；如果需要将URDF文件描述的机器人在rviz中显示，并通过UI控制各个活动joint的运动，此处提供了2个有关的功能包；即"joint_state_publisher"功能包（提供UI，控制各个joint的运动；同时发布每个joint状态的topic），和"robot_state_publisher"功能包（小疑问，说是发布每个link的tf消息，好像没用到？）；
+	    2.小疑问：关于上面两个功能包具体未知，比如使用"joint_state_publisher"功能包提供的UI发布控制各个joint运动的topic后，在rviz软件中怎么导入机器人URDF模型，怎么把控制关节运动的topic订阅到rviz中等；然后，在新建mrobot_description功能包时，没有写依赖上述两个功能包，意思是自己到CMakeLists.txt文件中设置，使用第三方库这样吗；然后，上述两个功能包的安装未知；
+
+	    3.rviz中显示模型，launch文件：
+<launch>
+    <param name="robot_description" textfile="$(find mrobot_description)/urdf/mrobot_chassis.urdf"/>
+
+    <param name="use_gui" value="true"/>
+
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mrobot_description)/config/mrobot_urdf.rviz" required="true"/>
+
+</launch>
+
+	        说明：在当前功能包"mrobot_description"中，调用了第三方功能包"joint_state_publisher"和"robot_state_publisher"，用于发布控制每个joint运动的topic；然后调用第三方功能包rviz，可视化显示；上述为启动文件"mrobot_description/launch/display_mrobot_chassis_urdf.launch"内容；
+	        说明：小疑问，<param name="xx" textfile="xx"/>，之前只介绍了<param name=.. value=..>形式，上述使用textfile变量形式未知；上述使用变量$(find mrobot_description)，不是应该使用$(rospack find mrobot_description)形式吗；
+	        小疑问：上面urdf文件是使用参数服务器形式加载的（即param命令），关于参数服务器加载的文件格式不详细，上述的urdf文件格式可用，可加载文件的格式是自定义的吗；
+
+
+
+	    4.运行结果
+	        roslaunch mrobot_description display_mrobot_chassis_urdf.launch
+	        说明：节点"joint_state_publisher"，发布每个joint状态的topic；提供一个UI界面，用于控制各个joint；节点"robot_state_publisher"，将机器人各个link的位姿，使用tf消息发布出去（好像没有用到吗）；节点"rviz"，可视化显示（不详细）；
+
+
+
+
+
+
+
+
+
+
+
+
+
+【5】.使用xacro优化URDF
+	1.杂
+	    说明：xacro机器人模型文件（后缀xacro）是URDF机器人模型文件（后缀urdf）的升级版；xacro文件支持宏定义，可以减少重复部分的代码量；支持可编程接口（如常量、变量、数学公式、条件语句等）；
+
+
+	2.xacro声明
+	    1.声明语句
+<?xml version="1.0" ?>
+<robot name="robot_name" xmlns:xacro="http://www.ros.org/wiki/xacro">
+...
+</robot>
+	    说明：如果使用xxx.xacro文件作为机器人模型的描述文件，则需要在<robot>标签中加入上述声明；urdf文件中其他部分可以全部不变，文件后缀改成xacro，就变成xacro文件了；（只不过，xacro文件还支持很多其他功能，用来精简urdf文件）
+	    说明：上述<robot>标签中，xmlns变量与name变量顺序没有要求；
+
+
+	3.常量定义
+	    格式举例：
+	        定义：<macro:property name="M_PI" value="3.1415927"/>
+	        使用：<origin xyz="0 0 0" rpy="$(M_PI) 0 0"/>
+
+	    说明：参数通常可以使用上述方式定义为常量，方便后期修改（类似C语言的define）；小疑问，定义常量的位置，好像是在<robot>标签之外；
+
+
+
+	4.调用数学公式
+	    格式举例：
+	        <origin xyz="0 $((motor_length+wheel_length)/2) 0" rpy="0 0 0"/>
+	    说明：即使用上述定义的多个常量进行数学运算；变量符号$应该包括住整个数学公式；
+
+
+	5.使用宏定义
+	    1.说明：xacro文件可以使用宏定义来声明重复使用的代码模块，并且可以输入参数，类似函数；小疑问，宏定义位置是在<robot>标签之外吗，还是任意都可以，只要在使用前定义就可以吗；
+
+	    2.定义部分，格式举例：
+<xacro:macro name="mrobot_model" params="x y z">
+    <link>...
+    <joint>...
+    ...
+    <link name="mrobot_num_$(x)_part">
+        ...
+    </link>
+</xacro:macro>
+
+	        说明：宏定义标签<xacro:macro name=... params=...>和<xacro:macro>；其中name变量是宏定义的名称，在调用该宏定义的地方需要用到；params变量中定义输入的变量；
+
+	        说明："mrobot_num_$(x)_num"，说明输入的变量使用类似编译前替换的机制，不是当作变量使用，而是可以出现在名称中；（类似C语言的define）；
+	        说明（不确定）：宏定义标签<xacro:macro name=... params="x:=1 object:=camera">；对于params变量，还有上述写法，好像意思是指定默认的输入变量值，如果调用时候，没有输入变量，则使用默认的变量值；
+
+
+	    3.调用部分，格式举例：
+	        <mrobot_model x="..." y="..." z="..."/>
+	        说明：调用部分使用宏定义的名称（name变量），并在后面给出每个输入变量的值；
+	        小疑问：好像也有的调用宏定义的格式使用如下，<xacro:mrobot_model x="..." y="..." z="..."/>
+
+
+
+	7.推荐的规范，与文件引用
+	    1.文件"mrobot_body.urdf.xacro"内容
+	        说明：在上述文件中，把整个<robot>和</robot>标签内的所有<link>和<joint>内容都放入name变量为"mrobot_body"的宏定义中，不包括<robot>标签本身；
+
+	    2.文件"mrobot.urdf.xacro"内容
+<?xml version="1.0" ?>
+<robot name="mrobot" xmlnx:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:include filename="$(find mrobot_description)/urdf/mrobot_body.urdf.xacro"/>
+
+    <mrobot_body/>
+</robot>
+	        说明：<xacro:include filename="xxx"/>命令，是把整个"xxx"文件中的内容，复制到include命令的位置（类似C语言的include命令）；在上述被include的"mrobot_body.urdf.xacro"文件中，只有宏定义的内容；下面的宏定义调用语句，调用宏定义；
+	        推荐的规范：因为机器人的模型文件"mrobot.urdf.xacro"中，可能不仅包括机器人自身的模型，还包括camera，Kinect，rilidar等模型，所以推荐把各个部分模型使用宏定义；然后在总的机器人模型文件"mrobot.urdf.xacro"中，只调用宏定义即可；类似模块化，方便修改；
+	        后缀名：上面使用了xx.urdf.xacro后缀名，其实只要xacro后缀即可；
+	        小疑问：上面include命令的位置，是否放在<robot>标签外面也可以；然后，$(find mrobot_descrption)命令，是否应该是$(rospack find mrobot_description)吗；
+
+
+
+
+	8.launch文件使用xacro模型，方法1
+	    说明：有两种方法使用xacro文件；方法1，使用如下命令，将xacro文件转换成URDF文件，launch文件的内容不变；方法2，在launch文件中，使用xacro文件解析器；
+	    转换命令：rosrun xacro xacro.py mrobot.urdf.xacro > mrobot.urdf
+	    小疑问，上述xacro功能包的安装未知；
+
+
+
+	9.launch文件使用xacro模型，方法2
+	    1.使用解析器
+	        launch中原本语句：<param name="robot_description" textfile="$(find mrobot_description)/urdf/mrobot_chassis.urdf"/>
+	        launch中修改后语句：
+<arg name="model" default="$(find xacro)/xacro --inorder '$(find mrobot_description)/urdf/mrobot.urdf.xacro'"/>
+<param name="robot_description" command="$(arg model)"/>
+
+
+	    2.使用xacro的launch文件
+	        说明：下面是使用xacro模型的launch文件内容，"mrobot_description/launch/display_mrobot.launch"；同样使用了第三方功能包的"joint_state_publisher"，"robot_state_publisher"，"rivz"，只不过这些节点使用xacro模型文件作为输入参数而已；
+
+<launch>
+    <arg name="model" default="$(find xacro)/xacro --inorder '$(find mrobot_description)/urdf/mrobot.urdf.xacro'"/>
+    <param name="robot_description" command="$(arg model)"/>
+
+    <param name="use_gui" value="true"/>
+
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mrobot_description)/config/mrobot_urdf.rviz" required="true"/>
+
+</launch>
+
+	    3.运行使用
+	        roslaunch mrobot_description display_mrobot.launch
+
+
+
+
+
+
+
+
+
+
+
+
+【6】.使用ArbotiX和rviz显示模型（没看懂，仅记录）
+	1.杂
+	    关于ArbotiX：（没看懂，仅记录）ArbotiX是一种控制电机、舵机的控制板，并提供相应的ROS功能包；但是这个功能包不仅可以驱动真实的ArbotiX控制板，还可以驱动仿真中的机器人，提供一个差速控制器；
+	    小疑问：意思原先是使用"joint_state_publisher"、"robot_state_publisher"功能包，通过UI直接是控制每个joint的运动，直接根据UI上的输入，发布对应数据的topic；而这个ArbotiX功能包，虽然也是接受输入，发布控制各个joint的topic，但是这里对输入量进行了处理，比如是差速控制器（键盘输入的不是每个joint的速度，而是前进速度，转弯角度之类），另外还使用了PID控制器等，让调速更加平稳之类吗，猜测是这样吗；
+
+	    安装ArbotiX功能包：
+	        sudo apt-get install ros-indigo-arbotix-*
+	        说明：对于indigo版本的ROS，可以直接使用上述命令安装；对于kinetic版本的ROS，在作者写作时候ROS的软件源还不提供，需要源码编译安装；下面的源码下载后，可以使用catkin_make编译安装；
+	        git clone https://github.com/vanadiumlabs/arbotix_ros.git
+
+
+
+
+	2.launch文件
+	    说明：设机器人模型文件为"mrobot_description/urdf/arbotix_mrobot_with_kinetic.launch"；则调用第三方功能包"Arbotix"，进行机器人模型显示的launch文件如下：
+
+<launch>
+    <arg name="urdf_file" default="$(find xacro)/xacro --inorder '$(find mrobot_description)/urdf/mrobot_with_kinetic.urdf.xacro'"/>
+    <param name="robot_description" command="$(arg urdf_file)"/>
+    <param name="use_gui" value="false"/>
+    <param name="/use_sim_time" value="false"/>
+
+    <node name="arbotix" pkg="arbotix_python" type="arbotix_driver" output="screen">
+        <rosparam file="$(find mrobot_description)/config/fake_mrobot_arbotix.yaml" command="load"/>
+        <param name="sim" value="true"/>
+    </node>
+
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+        <param name="publish_frequency" type="double" value="20.0"/>
+    </node>
+
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mrobot_description)/config/mrobot_arbotix.rviz" required="true"/>
+</launch>
+
+
+	    1.各部分注释，节点内容
+	        说明："joint_state_publisher"功能包原先使用的"/use_gui"变量值是"true"，此处为"false"，即不再提供UI；估计数据的流动顺序如下：（不确定，猜测）
+		"arbotix"节点：订阅键盘输入的"vel_cmd"这个topic（此处还没有启动，需要命令行单独启动键盘的节点），然后经过差速转换，PID控制，把键盘数据转换成各个joint的运动数据topic，并发布；
+		"joint_state_publisher"节点：订阅"arbotix"节点发布的topic，转发成控制各个joint的topic；
+		"rviz"节点：使用机器人模型xacro文件，和"joint_state_publisher"节点发布的各joint运动数据的topic；可视化显示；
+		"robot_state_publisher"节点：也订阅"arbotix"节点发布的topic，转发成各link的tf消息，但没有订阅者，好像没什么用；
+
+
+	    2.各部分注释，arbotix节点
+	        <node name="arbotix" pkg="arbotix_python" type="arbotix_driver" output="screen">
+	            <rosparam file="$(find mrobot_description)/config/fake_mrobot_arbotix.yaml" command="load"/>
+	            <param name="sim" value="true"/>
+	        </node>
+	        说明：arbotix这个功能包可以用去驱动硬件的arbotix驱动板（电机驱动吗？），也可以用作仿真，上述"sim"参数为"true"表示用于仿真；
+	        小疑问，"fake_mrobot_arbotix.yaml"文件的格式有规定吗，还是任意自定义，与读取程序怎么编写有关吗
+
+
+
+	3.yaml配置文件内容
+	    说明：即"arbotix"节点引用的"fake_mrobot_arbotix.yaml"文件，内容如下：
+controllers:
+{
+    base_controllers: {type: diff_controller, base_frame_id: base_footprint, base_width: 0.26, ticks_meter: 4100, Kp: 12, Ki:0, Ko:50, accel_limit:1.0}
+}
+	    小疑问（重复），"fake_mrobot_arbotix.yaml"文件的格式有规定吗，还是任意自定义，与读取程序怎么编写有关吗
+
+
+
+	4.运行使用
+	    roslaunch mrobot_description arbotix_mrobot_with_kinetic.urdf.xacro
+	    roslaunch mrobot_teleop mrobot_teleop.launch
+	    说明：第一个launch文件启动上述"arbotix"、"joint_state_publisher"、"rviz"等多个节点；然后因为"arbotix"好像是通过订阅"cmd_vel"这个topic来获取输入信息的（通过rostopic list查看）；所以使用第二个launch文件，启动的节点用于从键盘获取信息，然后发布成"cmd_vel"这个topic；
+	    关于"mrobot_teleop"：mrobot是ROSClub发布的一个类似实验室中"D1移动平台"小车的开源方案；前面仅简单介绍了整个方案中的"mrobot_bringup"功能包的部分代码；上述的"mrobot_teleop"功能包估计也是类似小乌龟实验的键盘节点；
+
+
+
+
+
+
+
+
+
+
+
+
+
+【7】.ros_control（没看懂，仅记录）
+	1.杂
+	    关于ros_control（课本上，没看懂）：ros_control是ROS为开发者提供的机器人控制中间件，包含一系列控制器接口、传动器接口、硬件接口、控制器工具箱等；
+	        说明：小疑问，前面的arbotix控制器，好像也就是转发下键盘输入的vel_cmd这个topic的信息，没有特别的处理吗？或者可以使用pid控制器吗
+
+
+	2.ros_control结构
+	    结构：控制器管理器（Controller Manager），控制器（Controller），机器人硬件抽象（RobotHW），真实机器人（Real Robot）
+	    说明：ROS的上层应用功能包输出信息给"控制器（Controller）"，"控制器（Controller）"输出控制信息到"机器人硬件抽象（RobotHW）"，"机器人硬件抽象（RobotHW）"到"真实机器人（Real Robot）"；然后"控制器管理器"可以管理各个"控制器"，这些"控制器"都是由ros_control功能包提供的，为了使得"控制器"可以用于各种机器人，所以使用了硬件抽象层；
+
+
+	3.控制器类型
+	    1.提供的类型：（不详细，具体作用未知）
+	        effort_controllers类，包括如下
+		joint_effort_controlllers
+		joint_velocity_controllers
+		joint_state_controllers
+
+	        joint_state_controllers类，包括如下
+		joint_state_controllers
+
+	        velocity_controllers类，包括如下
+		joint_velocity_controller
+
+	        position_controllers类，包括如下
+		joint_position_controller
+
+	    2.说明：好像是，ros_control功能包提供针对某种功能的通用控制器，然后可以用于控制各种类型的机器人（通过硬件抽象层来完成统一接口）；可以根据自己需求创建控制器，参考网址，https://github.com/ros-controllers/ros_control/wiki/controller_interface
+
+
+	4.硬件接口
+	    说明（不确定）：在ros_control功能包中，采用Controller和RobotHW的概念；此外还有"硬件接口"，"硬件接口"是Contoller和RobotHW之间的接口，每种RobotHW与一种机器人硬件对应，每种Controller与一种"硬件接口对应"；如下面的对应关系
+	        "joint_effort_controller"对应"关节力接口（JointEffortInterface）"
+	        "joint_velocity_controller"对应"关节速度接口（JointVelocityInterface）"
+	        "其他自定义控制器"对应"使用double jointPose[], double jointVel[], double jointEff[], double jointCmd[]等变量自定义的接口"
+
+
+
+
+	5.控制器管理器，命令行工具（不详细）
+	    说明：ros_control功能包与arbotix功能包类似，可以在launch文件中启动某节点，来启动需要的控制器，即控制器管理器；还可以通过命令行启动卸载控制器；
+
+	    1.命令行工具1
+	        rosrun controller_manager controller_manager <command> <controller_name>
+	        说明：其中<command>命令支持如下类型；主要用于控制器的加载卸载，启动停止；
+		load：加载一个控制器
+		unload：卸载一个控制器
+		start：启动控制器
+		stop：停止控制器
+		spawn：加载并启动一个控制器
+		kill：停止并卸载一个控制器
+
+	    2.命令行工具2
+	        rosrun controller_manager controller_manager <command>
+	        说明：其中<command>命令支持如下类型；主要用于查看控制器状态；
+		list：根据执行顺序列出所有控制器，并显示每个控制器状态；
+		list-types：显示所有控制器的类型；
+		reload-libraries：以插件形式重载所有控制器的库，不需要重新启动，方便对控制器的开发和测试；
+		reload-libraries --restore：以插件形式重载所有控制器的库，并恢复到初始状态；
+
+
+	    3.命令行工具3
+	        rosrun controller_manager spawner <name1> <name2> <name3>
+	        说明：加载多个控制器并启动，类似"rosrun controller_manager controller_manager load xxx"加，""rosrun controller_manager controller_manager start xxx"；或者类似"rosrun controller_manager controller_manager spawn xxx"
+
+
+	    4.命令行工具4
+	        rosrun controller_manager spawner [--stopped] <name1> <name2> <name3>
+	        说明：加载多个控制器，但不启动；类似"rosrun controller_manager controller_manager load xxx"
+
+
+	    5.命令行工具5
+	        rosrun controller_manager unspawner <name1> <name2> <name3>
+	        说明：停止多个控制器，但不卸载；类似类似"rosrun controller_manager controller_manager stop xxx"
+
+
+	    6.命令行工具6
+	        rosrun rqt_controller_manager rqt_controller_manager
+	        说明：可视化工具（不详细）
+
+
+
+	6.控制器管理器，launch工具
+	    1.launch命令1
+	        说明：类似命令行工具"rosrun controller_manager spawner [--stopped] xxx"，加载并启动多个控制器；launch命令举例如下；
+<launch>
+    <node pkg="controller_manager" type="spawner" args="name1 name2"/>
+</launch>
+
+	    2.launch命令2
+	        说明：类似命令行工具"rosrun controller_manager spawner [--stopped] xxx"；加载控制器，但不启动；launch命令举例如下：
+<launch>
+    <node pkg="controller_manager" type="spawner" args="--stopped name1 name2"/>
+</launch>
+
+
+
+
+
+
+【26】.关于Gazebo仿真
+	1.杂
+	    1.简介：是机器人仿真工具，提供整个场景的可视化界面；Gazebo是一个独立于ros的开发项目，只不过对ros的支持非常好，所以集成到ros套装中；Gazebo与ROS都是由OSRF(Open Source Robotics Foundation)开源机器人组织维护，所以对ROS支持很好。Gazebo常用功能有，机器人的运动学，动力学仿真；模拟机器人常用的传感器(如激光雷达，摄像头，IMU)，可以加载自定义的环境和场景；
+
+	    2.其他类似的仿真工具：V-Rep，Webots，Gazebo
+	        注释：Gazebo开源，对ROS支持最好
+
+
+	1.安装运行
+	    安装：sudo apt-get install ros-kinetic-gazebo-ros-pkgs ros-kinetic-gazebo-ros-control
+	        说明：桌面完整版中已经包含gazebo，不用再次安装；
+
+	    启动步骤：
+	        新终端：roscore
+	        新终端：rosrun gazebo_ros gazebo
+
+
+	2.检查gazebo版本，安装（不确定）
+	    说明：信息来源，ROS小车比赛同学给的"ros-tutorial-icourse163.pdf"中的信息，不确定是否可用；
+
+	    gazebo -v
+	        说明：查看gazebo版本；以下为升级gazebo到7.0版本的步骤；
+	    sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+
+	    wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+	    sudo apt-get update
+	    sudo apt-get install gazebo7
+
+
+	2.软件界面
+	    工具栏：软件最上方一栏；
+	    模型列表：软件左侧栏；
+	    模型属性项：未知
+	    时间显示区：软件最下方一栏；
+
+
+	3.gazebo有关的topic
+	    说明：使用rostopic list可以查看gazebo有关的topic；（或者rostopic list | grep gazebo）
+
+	    topic列表：
+	        /gazebo/link_states
+	        /gazebo/model_states
+	        /gazebo/parameter_description
+	        /gazebo/parameter_updates
+	        /gazebo/set_link_state
+	        /gazebo/set_model_state
+
+
+
+	4.gazebo有关的service
+	    说明：使用rosservice list可以查看gazebo有关的service
+	    service列表：
+	        /gazebo/apply_body_wrench
+	        /gazebo/apply_joint_effort
+	        /gazebo/clear_body_wrenches
+	        /gazebo/clear_joint_efforts
+	        /gazebo/delete_model
+	        /gazebo/get_joint_properties
+	        /gazebo/get_link_properties
+	        /gazebo/get_link_state
+	        /gazebo/get_loggers
+	        /gazebo/get_model_properties
+	        /gazebo/get_model_state
+	        /gazebo/get_loggers
+	        /gazebo/get_model_properties
+	        /gazebo/get_model_state
+	        /gazebo/get_physics_properties
+	        /gazebo/get_world_properties
+	        /gazebo/pause_physics
+	        /gazebo/reset_simulation
+	        /gazebo/reset_world
+	        /gazebo/set_joint_properties
+	        /gazebo/set_link_properties
+	        /gazebo/set_link_state
+	        /gazebo/set_logger_level
+	        /gazebo/set_model_configuration
+	        /gazebo/set_model_state
+	        /gazebo/set_parameters
+	        /gazebo/set_physics_properties
+	        /gazebo/spawn_gazebo_model
+	        /gazebo/spawn_sdf_model
+	        /gazebo/spawn_urdf_model
+	        /gazebo/unpause_physics
+	        /gazebo/get_loggers
+	        /gazebo/set_logger_level
+
+
+	5.构建仿真环境（不详细）
+	    说明：可以在仿真环境中加入各种物体，比如桌子，各种形状，正方体等；方式有两种，一种是"直接插入模型"，一种是"Building Editor"方法；
+
+	    1.直接插入模型
+	        步骤：在Gazebo软件的左侧栏目中，选择"Insert"选项卡，直接拖动所需的物体，放到中间的仿真区域即可；
+	        说明：模型的加载需要连接国外网站，为了保证顺利加载，可以提前将模型文件下载并放到本地路径"~/.gazebo/models"下；模型文件下载地址为"https://bitbucket.org/osrf/gazebo_models/downloads"
+
+	    2.Building Editor
+	        说明：还可以使用Gazebo提供的"Building Editor"工具手动绘制地图；Gazebo软件，菜单栏"Edit"/选择"Building Editor"，弹出新界面
+	        Building Editor绘制界面：左侧是各种绘图工具；在中间的上册窗口中绘制地图；中间下方的窗口中显示3D的绘制出的环境；
+
+
+
+
+
+
+
+【8】.Gazebo仿真，当前机器人
+
+	1.杂
+	    关于标签笔记：一些专用于gazebo仿真的标签就放在这里单独说明；不放到所有标签的笔记中集中解释，这样方便归类；
+	    关于仿真软件：前面使用urdf文件或xacro文件建立机器人模型后，使用rviz软件查看，即启动了"joint_state_publisher"、"robot_state_publisher"、"rviz"节点；此处换成使用gazebo软件查看机器人模型，需要对机器人模型（urdf文件、xacro文件）添加额外的要求；
+	    作者提供的功能包：前面使用rivz软件查看机器人模型，对应功能包"mrobot_description"；此处使用gazebo软件查看机器人模型，对应功能包"mrobot_gazebo"；
+
+	    gazebo仿真对标签要求：
+	        普通机器人模型：由<link>，<joint>，<robot>构成完整的机器人模型；
+	        1.需要设置<link>中的<inertia>标签；
+	        2.需要设置<gazebo>中的<material>标签；
+	        3.需要设置<transmission>标签
+	        7.需要设置控制器插件；（robot标签设置的）
+
+
+
+
+	2.<gazebo>标签
+	    内容举例：
+<gazebo reference="link_name">
+    <material>Gazebo/Black</material>
+</gazebo>
+	    说明：<material>标签的作用是设置<link_name>的颜色，与<link>中的<visual>标签作用相同，但是gazebo无法通过<visual>标签设置外观颜色，所以需要单独设置；否则默认情况下，gazebo中模型颜色是灰白色；
+	    标签位置：好像是和<robot>同一级；
+	    设置对象：在"reference"变量中设置，（不确定），好像一般是对<link>进行设置（可以对joint设置吗）；如果没有设置"reference"变量，则默认是对<robot>对象设置（意思是整个机器人颜色吗）
+	    标签特点：上述<material>标签，采用<label>xxx</label>形式；与普通的<label xxx/>形式不同；
+
+
+
+	3.<transmission>标签
+	    内容举例：
+<transmission name="joint_name">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="joint_name"/>
+    <actuator name="acutator_name">
+        <hardInterface>VelocityJointInterface</hardwareInterface>
+        <mechanicalReduation>1</mechanicalReduation>
+    </actuator>
+</transmission>
+
+	    1.说明：在gazebo仿真中，需要设置<transmission>标签，指定哪个joint需要转动，包括其他具体的细节；小疑问，机器人模型在rviz中显示时，好像没有指定，意思是在rviz中指定哪个joint订阅速度topic的吗（只启动了"joint_state_publisher"、"robot_state_publisher"、"rviz"节点）；
+	    2."transmission name"变量：指定当前这个传动系统的名称，应该是可以随便取名，名字唯一即可；
+	    3."joint name"变量：用于指定哪个关节需要驱动；小疑问，在rviz中，可能是指定某个joint订阅的topic；那么在gazebo仿真中，上面只是指定哪个关节需要转动，那么订阅的topic在哪里指定吗
+	    4."actuator name"变量：用于指定驱动器名称，估计也是可以随便去，名字唯一即可；
+	    5.有具体含义的设定（没看懂）
+	        1.type标签：指定为"transmission_interface/SimpleTransmission"
+	        2.hardInterface标签：指定为"VelocityJointInterface"
+	        3.mechanicalReduation标签：指定为"1"
+
+	    6.标签特点：其中<type>、<hardInterface>、<mechanicalReduation>标签都是采用<label>xxx<\label>形式，与之前普通的不同，原因未知；
+
+
+
+	4.关于控制器插件
+	    通用格式
+<gazebo reference="link_name">
+    <plugin name="unique_name" filename="plugin_name.so">
+        ...
+    </plugin>
+</gazebo>
+
+	    插件作用：对于上述机器人模型在gazebo中仿真，需要给<robot>标签使用插件，并设置需要驱动的joint等参数；（小疑问，机器人模型在rviz中显示，不需要设置这些，好像是在rviz中设置的吗，设置某个joint订阅哪个topic吗；然后启动的节点只有"joint_state_publisher"、"robot_state_publisher"、"rviz"）；
+	    标签位置：插件设置在<gazebo>标签内，该标签好像与<robot>位于同一级；然后<material>子标签，也是位于<gazebo>标签内的；
+	    reference变量：用于指定给哪个对象加入插件，可以是joint_name，link_name，robot_name；如果没有该变量，默认是给robot设置插件；
+	    plugin_name.so：可以在ROS默认安装路径下的"opt/ros/kinetic/lib"文件夹下找到Gazebo目前支持的插件；所有插件都是以"libgazeboXXX.so"命名的；本次使用的差速控制插件名称为"libgazebo_ros_diff_drive.so"
+
+
+
+	5.控制器插件，本次使用的插件的xacro内容
+	    功能包位置：之前使用rivz中查看机器人模型的功能包是"mrobot_description"，此处在gazebo中查看机器人模型，对xacro文件（或urdf文件）中加入了一些gazebo仿真所需的内容，对应的功能包是"mrobot_gazebo"；
+	    说明：当前机器人模型所在文件，"mrobot_gazebo/urdf/mrobot_body.urdf.xacro"；对<robot>标签使用的插件是"libgazebo_ros_diff_drive.so"；其中加入插件部分内容如下；
+
+<gazebo>
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+        <rosDebugLevel>Debug</rosDebugLevel>
+        <publishWheelTF>true</publishWheelTF>
+        <robotNamespace>/</robotNamespace>
+        <publishTf>1</publishTf>
+        <publishWheelJointState>true</publishWheelJointState>
+        <alwaysOn>true</alwaysOn>
+        <updateRate>100.0</updateRate>
+        <legecyMode>true</legecyMode>
+        <leftJoint>base_to_wheel_left_joint</leftJoint>
+        <rightJoint>base_to_wheel_right_joint</rightJoint>
+        <wheelSeparation>$(base_link_radius*2)</wheelSeparation>
+        <wheelDiameter>$(2*wheel_radius)</wheelDiameter>
+        <broadcastTF>1</broadcastTF>
+        <wheelTorque>30</wheelTorque>
+        <wheelAcceleration>1.8</wheelAcceleration>
+        <commandTopic>cmd_cel</commandTopic>
+        <odometryFrame>odom</odometryFrame>
+        <odometryTopic>odom</odometryTopic>
+        <robotBaseFrame>base_footprint</robotBaseFrame>
+    </plugin>
+</gazebo>
+
+	    插件作用（重复）：对于上述机器人模型在gazebo中仿真，需要给<robot>标签使用插件，并设置需要驱动的joint等参数；（小疑问，机器人模型在rviz中显示，不需要设置这些，好像是在rviz中设置的吗，设置某个joint订阅哪个topic吗；然后启动的节点只有"joint_state_publisher"、"robot_state_publisher"、"rviz"）；
+
+	    部分参数说明：（不详细）
+	        <leftJoint>、<rightJoint>：设定转动的Joint，控制器插件最终需要控制的是这两个Joint转动；
+	        <robotNamespace>：（不详细）机器人命名空间；插件的所有数据发布订阅都在该命名空间；
+	        <wheelSeperation>、<wheelDiameter>：机器人模型的尺寸；
+	        <wheelAcceleraton>：车轮转动的加速度（小疑问，这个不是应该与控制命令有关吗）
+	        <commandTopic>：控制器订阅的速度控制指令；（不详细）
+	        <odometryTopic>：里程计数据的参考坐标系；（不详细）
+
+
+
+
+	6.launch文件
+	    回顾：前面在rviz查看机器人模型的launch文件是"mrobot_description/display_mrobot.launch"，启动的节点包括"joint_state_publisher"、"robot_state_publisher"、"rviz"， 并订阅键盘输入的cmd_vel这个topic；
+	    当前launch文件：文件为"mrobot_gazebo/view_mrobot_gazebo.launch"；文件内容如下；
+
+<launch>
+
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find mrobot_gazebo)/urdf/mrobot.urdf.xacro'"/>
+
+
+    <!-- 定义gazebo仿真环境所需参数 -->
+    <arg name="world_name" value="$(find mrobot_gazebo)/worlds/playground.world"/>
+    <arg name="debug" default="false"/>
+    <arg name="gui" default="true"/>
+    <arg name="paused" default="false"/>
+    <arg name="use_sim_time" default="true"/>
+    <arg name="headless" default="false"/>
+
+
+    <!-- gazebo仿真环境 -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(arg world_name)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="paused" value="$(arg pausd)"/>
+        <arg name="use_sim_time" value="$(use_sim_time)"/>
+        <arg name="headless" value="$(headless)"/>
+    </include>
+
+
+    <!-- joint_state_publisher节点 -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+
+
+    <!-- robot_state_publisher节点 -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+        <param name="publish_frequency" type="double" value="50.0"/>
+    </node>
+
+
+    <!-- gazebo中加载机器人模型 -->
+    <node name="gazebo_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf model mrobot -param robot_description"/>
+
+</launch>
+
+	    说明：使用gazebo查看机器人模型的launch文件中，启动的节点包括，"joint_state_publisher"、"robot_state_publisher"、"gazebo_spawner"，其他整个"empty_world.launch"中包括的文件；（不确定）逻辑好像还是，joint_state_publisher节点订阅键盘输入的cmd_vel这个topic，然后由gazebo软件中订阅"joint_state_publisher"节点发布的内容；
+
+
+
+	7.运行使用
+	    roslaunch mrobot_gazebo view_mrobot_gazebo.launch
+	    roslaunch mrobot_teleop mrobot_teleop.launch
+	    说明：在gazebo中显示机器人模型，启动的节点包括，"joint_state_publisher"、"robot_state_publisher"、"gazebo_spawner"，其他整个"empty_world.launch"中包括的文件；好像"joint_state_publisher"这个节点也是订阅键盘的cmd_vel这个topic；所以通过"mrobot_teleop.launch"来发布这个topic；
+
+
+
+
+
+
+
+
+
+
+
+
+【9】.gazebo，摄像头仿真
+	说明：带有摄像头的机器人模型在rivz中显示时，机器人模型共包含3个文件，分别是"mrobot_description/urdf/mrobot_with_camera.urdf.xacro"（总的xacro文件），"mrobot_description/urdf/mrobot_body.urdf.xacro"（机器人本身的xacro文件），"mrobot_description/urdf/camera.xacro"（摄像头的xacro文件）；当在gazebo中显示机器人模型，需要进行摄像头仿真，则需要对"mrobot_description/urdf/camera.xacro"文件，添加摄像头的插件；添加后的文件是"mrobot_gazebo/urdf/camera.xacro"
+
+
+	1.添加摄像头仿真插件，xacro文件添加内容
+<gazebo reference="$(prefix)_link">
+    <material>Gazebo/Black</material>
+</gazebo>
+
+<gazebo reference="$(prefix)_link">
+    <sensor type="camera" name="camera_node">
+
+        <update_rate>30.0</update_rate>
+
+        <camera name="head">
+	<horizontal_fov>1.3962634</horizontal_fov>
+	<image>
+	    <width>1280</width>
+	    <height>720</height>
+	    <format>R8G8B8</format>
+	</image>
+	<clip>
+	    <near>0.02</near>
+	    <far>300</far>
+	</clip>
+	<noise>
+	    <type>gaussian</type>
+	    <mean>0.0</mean>
+	    <stddev>0.007</stddev>
+	</noise>
+        </camera>
+
+        <plugin name="gazebo_camera" filename="libgazebo_ros_camera.so">
+	<alwaysOn>true</alwaysOn>
+	<updateRate>0.0</updateRate>
+	<cameraName>/camera</cameraName>
+	<imageTopicName>image_raw</imageTopicName>
+	<cameraInfoTopicName>camera_info</cameraInfoTopicName>
+	<frameName>camera_link</frameName>
+	<backBaseline>0.07</backBaseline>
+	<distortionK1>0.0</distortionK1>
+	<distortionK2>0.0</distortionK2>
+	<distortionK3>0.0</distortionK3>
+	<distortionT1>0.0</distortionT1>
+	<distortionT2>0.0</distortionT2>
+        </plugin>
+
+    </sensor>
+</gazebo>
+	    说明：关于几个可以自由取名的名字，可能需要唯一即可，<sensor>标签中，name="camera_node"；<camera>标签中，name="head"；<plugin>标签中，name="gazebo_camera"；
+
+
+	2.运行使用
+	    roslaunch mrobot_gazebo view_mrobot_with_camera_gazebo.launch
+	    rqt_image_view
+	    说明：使用"rostopic list"命令可以看到上述摄像头插件发布的摄像头画面的topic，即"/camera/image_raw"，在rqt_image_view软件中输入topic名即可看到仿真的摄像头画面；
+
+
+
+
+
+
+
+
+
+
+
+
+【10】.gazebo，Kinect仿真
+	说明：带有Kinect的机器人模型在rviz中显示时，机器人模型文件共包括三个，分别是"mrobot_description/urdf/mrobot_with_kinect.urdf.xacro"（总的xacro文件），"mrobot_description/urdf/mrobot_body.urdf.xacro"（机器人本身的xacro文件），"mrobot_description/urdf/kinect.xacro"（Kinect的xacro文件）；在gazebo中显示模型时，需要对"mrobot_description/urdf/kinect.xacro"（Kinect的xacro文件）添加gazebo的仿真插件；修改后的文件为"mrobot_gazebo/urdf/kinect.xacro"；
+
+
+	1.添加Kinect仿真插件，xacro文件添加内容
+<gazebo reference="$(prefix)_link">
+    <sensor type="depth" name="$(prefix)">
+
+        <always_on>true</always_on>
+
+        <update_rate>20.0</update_rate>
+
+        <camera>
+	<horizontal_fov>$(60.0*M_PI/180.0)</horizontal_fov>
+	<image>
+	    <format>R8G8B8</format>
+	    <width>640</width>
+	    <height>480</height>
+	</image>
+	<clip>
+	    <near>0.05</near>
+	    <far>8.0</far>
+	</clip>
+        </camera>
+
+        <plugin name="kinect_$(prefix)_controller" filename="libgazebo_ros_openni_kinect.so">
+	<cameraName>$(prefix)</cameraName>
+	<alwaysOn>true</alwaysOn>
+	<updateRate>10</updateRate>
+	<imageTopicName>rgb/image_raw</imageTopicName>
+	<depthImageTopicName>depth/image_raw</depthImageTopicName>
+	<pointCloudTopicName>depth/points</pointCloudTopicName>
+	<cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+	<depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+	<frameName>$(prefix)_frame_optical</frameName>
+	<baseline>0.1</baseline>
+	<distortionK1>0.0</distortionK1>
+	<distortionK2>0.0</distortionK2>
+	<distortionK3>0.0</distortionK3>
+	<distortionT1>0.0</distortionT1>
+	<distortionT2>0.0</distortionT2>
+	<pointCloudCutoff>0.4</pointCloudCutoff>
+        </plugin>
+
+    </sensor>
+</gazebo>
+	    说明：关于几个命名问题（估计也是可以任意取名，具有唯一性即可）；<sensor>标签中，name="$(prefix)"；<plugin>标签中，name="kinect_$(prefix)_controller"；<frameName>标签中，name="$(prefix)_frame_optical"；
+
+	    发布的topic：rgb相机topic，"rgb/image_raw"；深度相机topic，"depth/image_raw"（小疑问，是指红外吗）；点云topic，"depth/points"；
+
+
+	2.运行使用
+	    roslaunch mrobot_gazebo view_mrobot_with_kinect.launch
+	    rosrun rviz rviz
+	    查看topic：使用"rostopic list"可以查看到发布的topic，即"/camera/rgb/image_raw"，"/camera/depth/image_raw"，"/camera/depth/points"；
+	    rviz设置：在rviz中，设置"Fixed Frame"为"camera_frame_optical"；然后添加一个"PointCloud2"的插件；修改该插件订阅的topic为"/camera/depth/points"
+	        小疑问：只查看点云的topic，rgb相机和depth相机的topic不查看吗；
+
+
+
+
+
+
+
+
+
+
+【11】.gazebo，激光雷达rplidar仿真
+	说明：对激光雷达rplidar模型文件修改，添加gazebo插件，修改后的文件为，"mrobot_gazebo/urdf/rplidar.xacro"
+
+	1.添加rplidar插件，xacro文件内容
+<gazebo reference="$(prefix)_link">
+    <material>Gazebo/Black</material>
+</gazebo>
+
+<gazebo>
+    <sensor type="ray" name="rplidar">
+        <pose>0 0 0 0 0 0</pose>
+
+        <visualize>false</visualize>
+
+        <update_rate>5.5</update_rate>
+
+        <ray>
+	<scan>
+	    <horizontal>
+	        <samples>360</samples>
+	        <resolution>1</resolution>
+	        <min_angle>-3</min_angle>
+	        <max_angle>3</max_angle>
+	    </horizontal>
+	</scan>
+
+	<range>
+	    <min>0.10</min>
+	    <max>6.0</max>
+	    <resolution>0.01</resolution>
+	</range>
+
+	<noise>
+	    <type>gaussian</type>
+	    <mean>0.0</mean>
+	    <stddev>0.01</stddev>
+	</noise>
+        </ray>
+
+        <plugin name="gazebo_rplidar" filename="libgazebo_ros_laser.so">
+	<topicName>/scan</topicName>
+	<frameName>laser_link</frameName>
+        </plugin>
+
+    </sensor>
+</gazebo>
+
+	    说明：几个自由命名的地方，<sensor>标签中，name="rplidar"；<plugin>标签中，name="gazebo_rplidar"；<frameName>标签中，name="laser_link"；
+
+	    发布的topic：/scan
+
+
+
+	2.运行使用
+	    roslaunch mrobot_gazebo view_mrobot_with_laser_gazebo.launch
+	    rosrun rviz rviz
+	    说明：使用"rostopic list"可以看到rplidar插件发布的"/scan"这个topic；
+	    rviz设置：在rviz软件中，设置"Fixed Frame"为"base_footprint"
+（小疑问，上面不是把frameName设置为"laser_link"吗）；添加一个"LaserScan"插件，修改该插件订阅的topic为"/scan"；
+
+
+
+
+
+
+
+
+
+
+
+
+【12】.摄像头标定
+	1.安装功能包
+	    sudo apt-get install ros-kinect-camera-calibration
+	    说明：安装camera_calibration功能包；
+
+
+	2.标定命令，普通Camera
+	    命令行
+	        roslaunch usb_cam usb_cam-test.launch
+	        rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.024 image:=/usb_cam/image_raw camera:=/usb_cam
+
+	    摄像头显示的驱动包：此处使用前面介绍的usb_cam功能包驱动摄像头；标定过程应该和摄像头显示的驱动包没有关系，只要能提供摄像头实时画面topic即可，无论什么驱动包；上述usb_cam功能包会提供"/usb_cam/iamge_raw"这个topic；
+	    标定板：使用棋盘格标定板，在该教材的配套资料中有，"robot_vision/doc/checkerborad.pdf"，打印出来即可；
+	    摄像头的launch文件：还可以使用"roslaunch robot_vision usb_cam.launch"；是教材配套资料中提供的；
+
+	    参数，--size 8x6：标定棋盘格的内部角点数，此处使用的标定板共9*7个方格，故有8*6个内部角点；上述命令中，乘号使用英文字母x；
+
+	    参数，--square 0.024：对应每个棋盘格的边长，单位是米；
+	    参数，image:=/usb_cam/image_raw，上述usb_cam功能包发布的摄像头实时画面的topic是"/usb_cam/image_raw"；
+	    参数，camera:=/usb_cam，（不清楚），猜测是，每次这个参数都是image参数去掉最后一项，作用未知；
+
+
+
+	3.标定步骤，普通Camera
+	    说明：在启动"cameracalibrator.py"的标定节点后，会弹出图形界面，有三个灰色按钮"Calibrate"、"Save"、"Commit"；右上角有三个小进度条，"X"、"Y"、"Size"、"Skew"；
+	    步骤1：分别按照下列顺序反复移动摄像头，右上角的小进度条会提示标定进度；直到"Calibrate"按钮变色，表示标定程序的参数采集完成，点击"Calibrate"按钮；
+	        "X"：标定靶在摄像头视野中左右移动；
+	        "Y"：标定靶在摄像头视野中上下移动；
+	        "Size"：标定靶在摄像头视野中前后移动；
+	        "Skew"：标定靶在摄像头视野中倾斜转动；
+
+	    步骤2：点击"Calibrate"按钮后，标定程序开始自动计算摄像头标定参数，这个过程需要等待一段时间，界面可能变成灰色无响应状态，注意不要关闭；计算完成后，在终端界面会显示标定结果；
+
+	    步骤3：点击图形界面上的"Save"按钮，标定参数会保存到默认文件夹下，在终端会提示该路径，如，Wrote calibration data to '/tmp/calibrationdata.tar.gz'；
+
+	    步骤4：点击图像界面上的"Commit"按钮，提交数据并退出程序；打开/tmp文件夹，解压文件"calibrationdata.tar.gz"，包含如下文件：一堆png图像（估计是标定中用到的关键图片）；ost.txt文件，ost.yaml文件（估计是标定结果文件，分别使用两种文件格式保存）；
+
+
+
+	4.标定命令，Kinect
+	    roslaunch freenect_launch freenect.launch
+	    rosrun camera_calibration cameracalibrator.py image:=/camera/rgb/image_raw camera:=/camera/rgb --size 8x6 --square 0.024
+	    rosrun camera_calibration cameracalibrator.py image:=/camera/ir/image_raw camera:=/camera/ir --size 8x6 --square 0.024
+	    说明：Kinect有两个摄像头，RGB相机和红外相机，需要分别标定，步骤与单个相机标定相同；
+	    相机的launch文件：也可以使用"roslaunch robot_vision freenect.launch"，是教材的配套资料中提供的；
+
+
+
+
+
+
+
+
+
+
+
+
+【13】.使用标定参数的配置文件
+	1.普通Camera使用标定的配置文件
+	    说明：之前使用usb_cam功能包驱动普通Camera；使用的launch文件为"usb_cam-test.launch"，其中包含的节点有"usb_cam"，"image_view"；（说明，如果不加入"image_view"节点，则可以通过rqt_image_view中显示摄像头发布的图像topic）
+
+
+	2.添加了标定配置文件的launch文件，普通Camera
+	    说明：原始的launch文件，"usb_cam-test.launch"位于usb_cam功能包中；修改的launch文件为，"robot_vision/launch/usb_cam_with_calibration.launch"；
+
+<launch>
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
+        <param name="camera_frame_id" value="usb_cam"/>
+        <param name="video_device" value="/dev/video0"/>
+        <param name="image_width" value="640"/>
+        <param name="image_height" value="480"/>
+        <param name="pixel_format" value="yuyv"/>
+        <param name="io_method" value="mmap"/>
+
+        <!-- 新增的标定文件 -->
+        <param name="camera_info_url" type="string" value="file://$(find robot_vision)/camera_calibration.yaml"/>
+    </node>
+</launch>
+
+	    说明：在"usb_cam"节点中，新增了"camera_info_url"这个参数服务器；
+
+
+
+	3.添加了标定配置文件的launch文件，Kinect
+	    说明：前面使用freenect功能包驱动Kinect；使用的launch文件为"mrobot_bringup/launch/freenect.launch"文件，或者也可使用freenect功能包中默认的launch文件，"freenect.launch"；修改后的launch文件为"robot_vision/launch/freenect_with_calibration.launch"；
+
+<launch>
+    <include file="$(find freenet_launch)/launch/freenect.launch">
+        <arg name="publish_tf"		value="false"/>
+        <arg name="depth_registeration"	value="true"/>
+        <arg name="rgb_processing"		value="true"/>
+        <arg name="ir_processing"		value="false"/>
+        <arg name="depth_processing"		value="false"/>
+        <arg name="depth_registered_processing" value="true"/>
+        <arg name="disparity_processing"	value="false"/>
+        <arg name="disparity_registered_processing" value="false"/>
+        <arg name="sw_registered_processing"	value="false"/>
+        <arg name="hw_registered_processing"	value="true"/>
+
+        <!-- 新增的标定文件 -->
+        <arg name="rgb_camera_info_url" value="file://$(find robot_vision)/kinect_rgb_calibration.yaml"/>
+        <arg name="depth_camera_info_url" value="file://$(find robot_vision)/kinect_depth_calibraion.yaml"/>
+
+    </include>
+</launch>
+
+	    报错：在使用上述launch文件启动后，会提示WARN，内容如下，"[rgb_A7077 4707 1633 27A] does not match name narrow_stereo in xxx/kinect_rgb_calibration.yaml"，"[depth_A7077 4707 1633 27A] does not match name narrow_stereo in xxx/kinect_depth_calibration.yaml"；
+	    处理：需要把标定文件中的camera_name参数分别改成上述的"rgb_A7077 4707 1633 27A"，"depth_A7077 4707 1633 27A"；
+
+
+
+
+
+
+
+
+
+
+
+【14】.OpenCV简介
+	1.杂
+	    OpenCV简介：OpenCV库（open source computer vision library）是一个基于BSD许可发行的跨平台计算机视觉库，可以运行在Linux，Windows，macOS等操作系统上；OpenCV由一系列C函数和少量C++类构成，同时还提供了C++、Python、Ruby、MATLAB等语言的接口；实现了很多图像处理和计算机视觉方面的通用算法，并且对非商业用途和商业用途都是免费的；同时OpenCV还可以直接访问硬件摄像头，提供了一个简单的GUI系统，highgui；
+
+	    安装：sudo apt-get install ros-kinect-vision-opencv libopencv-dev python-opencv
+
+	    关于在ROS中使用OpenCV：在ROS中提供了与OpenCV的接口功能包，cv_bridge；（好像是，部分函数通过cv_bridge的接口调用，部分函数好像还是可以直接调用OpenCV的函数）；使用cv_bridge的程序通用步骤，订阅ROS中的图像topic，转换成OpenCV中的图像格式，进行图像处理后，转换回ROS中的图像格式，并通过新的topic发布出去；
+
+
+	2.简单程序示例
+	    1.说明：程序作用，订阅一个图像的topic，转换成OpenCV中的图像格式，在图像中添加一个圆形，再转换回ROS中图像格式，并使用新的topic发布出去；代码文件是，"robot_vision/scripts/cv_bridge_test.py"；
+
+	    2.文件内容：
+import rospy
+import cv2
+from cv_bridge import CvBridge CvBridgeError
+from sensor_msgs.msg import Image
+
+#类定义部分
+class image_converter:
+    def __init__(self):
+        self.image_pub=rospy.Publisher("cv_bridge_image", Image, queue_size=1)
+        self.bridge=CvBridge()
+        self.image_sub=rospy.Subscriber("/usb_cam/image_raw", Image, self.callback)
+
+
+    def callback(self, data):
+        try:
+	cv_image=self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+	print e
+
+
+        (rows, cols, channels)=cv_image.shape
+        if cols>60 and rows>60:
+	cv2.circle(cv_image, (60, 60), 30, (0, 0, 255), -1)
+
+
+        cv2.imshow("Image windows", cv_image)
+        cv2.waitKey(3)
+
+
+        try:
+	self.image_pub.publish(self.bridge.cv2_to_imgmsg(cv_image, "bgr8"))
+        except CvBridgeError as e:
+	print e
+
+
+
+#主函数部分
+if __name__ == "__main__":
+    try:
+        #初始化ROS节点
+        rospy.init_node("cv_bridge_test")
+        rospy.loginfo("Starting cv_bridge_test node")
+        image_converter()
+        rospy.spin()
+    except KeybroadInterrupt:
+        print "Shutdown"
+        cv2.destroyAllWindows()
+
+
+	    3.部分代码说明
+	        新建变量有关：在python中不需要新建变量，第一次使用某个变量名时，会自动新建该变量；
+	        关于self变量：猜测，好像是self指代当前class自身，如果定义变量时采用self.xxx，则该变量是class中的变量（类似C++中public变量），整个class中所有函数都能看到；如果采用xxx命名变量，则该变量仅在当前函数中可见；
+
+	        调用OpenCV中的函数：好像不是所有OpenCV中的函数，都是通过self.bridge变量调用的，有些是直接调用的，统计如下；通过self.bridge变量调用的函数有，"imgmsg_to_cv2()"、"cv2_to_imgmsg()"；直接调用的函数有，"cv2.circle()"、"cv2.imshow()"、"cv2.waitKey()"、"cv2.destroyAllWindows"；
+
+	        关于cv_image.shape：小疑问，这是一个函数吗；意思cv_image是一个class吗；
+
+
+	    4.部分代码说明：
+	    def __init__(self):
+	        self.image_pub=rospy.Publisher("cv_bridge_image", Image, queue_size=1)
+	        self.bridge=CvBridge()
+	        self.image_sub=rospy.Subscriber("/usb_cam/image_raw", Image, self.callback)
+	        说明：构造函数，在定义该class的对象时，会自动执行构造函数，新建"self.image_sub"、"self.image_pub"、"self.bridge"变量；
+	        变量作用：self_image_pub变量，用于发布topic；在后面最终处理好的图像，通过该变量定义中的"cv_bridge_image"这个topic发布出去；
+	        变量作用：self.bridge变量，是cv_bridge功能包中的，即部分OpenCV函数通过该变量来调用；意思好像是用作OpenCV与ROS之间的接口；
+	        变量作用：self.image_sub变量，上述整个代码功能是，订阅相机的topic，将ROS图像转OpenCV图像，加一个圆形后，再转ROS图像，然后发布topic出去；上述变量即订阅相机的"/usb_cam/image_raw"这个topic，然后调用当前class中的callback()函数；（即self.callback()函数）
+
+
+	    5.部分代码说明：
+	        try:
+		cv_image=self.bridge.imgmsg_to_cv2(data, "bgr8")
+	        except CvBridgeError as e:
+		print e
+	        说明：函数callback()中的代码，在收到"/usb_cam/image_raw"这个topic的消息后，调用callback()函数；上述代码，将ROS图像转换成OpenCV图像；使用了cv_bridge()这个功能包的接口作用（即使用self.bridge变量）；转换函数是"imgmsg_to_cv2()"；转换成的OpenCV图像，存放在cv_image变量，该变量没有命名成self.xxx形式，即属于局部变量；
+
+
+	    6.部分代码说明：
+	        (rows, cols, channels)=cv_image.shape
+	        if cols>60 and rows>60:
+		cv2.circle(cv_image, (60, 60), 30, (0, 0, 255), -1)
+	        说明：上述代码作用是，在OpenCV格式的图像数据cv_image上，增加一个圆形；cv_image.shape部分，不是函数，是cv_image变量结构体的内部变量，仅是为了获得"rows"、"cols"变量，用于下面判断；cv2.circle()部分，调用OpenCV函数，添加一个圆形，具体参数含义未知；小疑问，此处OpenCV函数，没有通过cv_bridge()接口使用，而是直接调用吗；
+
+
+	    7.部分代码说明：
+	        cv2.imshow("Image windows", cv_image)
+	        cv2.waitKey(3)
+	        说明：显示添加了圆形后的cv_image变量；小疑问，同样此处没有通过cv_bridge()接口使用，而是直接调用OpenCV的函数；
+
+
+	    8.部分代码说明：
+	        try:
+		self.image_pub.publish(self.bridge.cv2_to_imgmsg(cv_image, "bgr8"))
+	        except CvBridgeError as e:
+		print e
+	        说明：上述代码的作用是，把处理后的OpenCV格式的图像，转换成ROS图像，然后发布成topic的消息；其中图像格式转换函数为"cv2_to_imgmsg()"，是通过cv_bridge功能包的接口调用（即self.bridge变量）；
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

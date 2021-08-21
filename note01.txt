@@ -1,0 +1,4133 @@
+
+
+
+信息来源：书本"ROS机器人开发实践"的笔记
+
+
+
+【1】.杂
+【2】.小乌龟实验
+【3】.常见命令
+【4】."ROS-Academy-for-Beginners"教学包
+【5】.topic数据类型
+
+【6】.service数据类型
+【7】.parameter server数据类型
+【8】.action数据类型
+【9】.catkin，工作空间
+【10】.catkin，功能包
+
+【11】.CMakeLists.txt文件（不详细）
+【12】.package.xml文件
+【13】.metapackage
+【14】.rosbuild，工作空间
+【15】.rosbuild，功能包
+
+【16】.工作空间覆盖
+【17】.关于Eclipse开发环境
+【18】.关于RoboWare开发环境
+【19】.创建Publisher
+【20】.创建Subscriber
+
+【21】.功能包的编译，CMakeLists.txt
+【22】.自定义topic的消息类型
+【23】.自定义service类型
+【24】.创建Server
+【25】.创建Client
+
+【26】.Service的编译运行
+【27】.ROS的命令空间（没看懂，仅记录）
+【28】.多机通信
+【29】.launch启动文件
+【30】.TF坐标变换，常用工具
+
+【31】.TF坐标变换，小乌龟例子
+【32】.小乌龟例子，turtlex_tf_broadcaster节点
+【33】.小乌龟例子，turtle_listener节点
+【34】.小乌龟例子，launch文件
+【35】.Qt工具箱
+
+【36】.rviz三维可视化平台
+【37】.rosbag数据记录与回放
+【38】.MRobot平台的搭建
+【39】.MRobot，通信协议
+【40】.MRobot，树莓派上node，mrobot_bringup.cpp
+
+【41】.MRobot，树莓派上node，其他
+【42】.摄像头功能包
+【43】.数据类型，Camera功能包
+【44】.Kinect功能包
+【45】.数据类型，Kinect功能包
+【46】.rplidar平面激光雷达功能包
+
+
+
+
+
+
+
+
+【1】.杂
+	1.杂t
+	    关于ROS：最初起源于斯坦福大学与机器人公司Willow Garage合作的个人机器人项目（Personal Robots Project）；在2008年后由Willow Garage公司维护；
+	    支持ROS的常见机器人平台：Pioneer，Aldebaran Nao，TurtleBot，Lego NXT，AscTec Quadrotor
+	    实时性：ROS不适合做实时性要求高的任务，不是RTOS(Real-Time Operating System)
+	    ROS的软件层级：次级操作系统(或 元级操作系统)(或 后操作系统)，需要安装在ubuntu等系统上，但又有操作系统的特点（硬件抽象管理、底层驱动程序管理等）
+	    其他类似机器人架构：Player，YARP，Microsoft Robotics Studio等
+
+	    ROS同时支持多语言：C++，Python，Lisp，Java（为了支持多语言，ROS使用接口定义语言，IDL，在模块间传递消息）
+	    ROS计算图包括（不详细）：Nodes(节点)，Master(管理器)，Parameter Server(参数服务器)，Messages(消息)，Topics(主题)，Services(服务)，Bags(数据包)
+
+	    ROS文件架构
+	        1.main：通用工具（由Willow Garage公司维护）
+	        2.universe：算法框架，硬件驱动（由全球开发者贡献）
+		说明：universe包括，libraries（如tf，opencv）、capabilities、applications；
+
+
+
+	2.通信方式
+	    topic：概述，各个node在master注册后，可以发布topic，也可以订阅别的node发布的topic；订阅的node收到topic，被触发，进入相应的函数处理；通信方式，异步通信；发布者和订阅者各自处理，不互相等对方（如果发送一个，处理一个，则同步处理）；实现原理是TCP/IP；消息通讯对象，支持多对多；通信模型，Publish-Subscribe；应用场景，实时性，周期性消息，连续，高频的数据发布；
+
+	    service：概述，主要目的是用于减小topic通信对系统资源的消耗，service方式系统资源消耗小，用于偶尔的，使用较小的通信场景；通信过程为，请求放(Client)发送一个request，等待应答方(Server)处理，反馈一个Reply，通过"请求-应答"机制通信；通信方式，同步通信；实现原理，都是TCP/IP；消息通讯对象，支持多对多；通信模型，Request-Reply；应用场景，偶尔使用的功能
+	    parameter server：参数服务器是master的一部分，用于存储node参数，全局参数；使用"字典"数据类型记录参数，即字典，key，键值对；
+	    action：概述，service+查看任务进度+随时请求终止；action包括3个部分，目标（告诉机器人要执行的动作）、反馈（实时的动作完成进度，状态）、结果（本次动作的所有信息）；
+
+
+
+
+
+
+
+【2】.小乌龟实验
+	1.小乌龟实验，turtlesim中的各变量
+	    topic：
+	        turtleX/cmd_vel（topic名）；类型，geomotry_msgs/Twist；说明，由键盘的node发布，小乌龟的node订阅，即键盘输入的指令；
+	        turtleX/pose；类型，turtlesim/Pose；说明，小乌龟的姿态，包括xy坐标，角度，线速度，角速度；由小乌龟的node发布；
+
+	    service：
+	        clear；类型，std_srvs/Empty；说明，删除仿真器中背景颜色；
+	        reset；类型，std_srvs/Empty；说明，复位仿真器的初始设置；
+	        kill；类型，turtlesim/Kill；说明，删除一只小乌龟；
+	        spawn；类型，turtlesim/Spawn；说明，新生一只小乌龟；
+	        turtleX/set_pen；类型，turtlesim/SetPen；说明，设置画笔的颜色和线宽；
+	        turtleX/teleport_absolute；类型，turtlesim/Teleport_Absolute；说明，移动小乌龟到指定姿态？
+	        turtleX/teleport_relative；类型，turtlesim/Teleport_Relative；移动小乌龟到指定的角度和距离？（和上面的区别？）
+
+	    parameter server：
+	        background_b；类型，int；默认值，255；
+	        background_g；类型，int；默认值，86；
+	        background_r；类型，int；默认值，69；
+
+
+
+	2.小乌龟实验
+	    1.安装：sudo apt-get install ros-kinetic-turtlesim
+	    2.新终端：roscore
+	        说明：ROS的节点管理器，ROS Master；
+
+	    3.新终端：rosrun turtlesim turtlesim_node
+	        说明：turtlesim仿真器节点，显示小乌龟；
+
+	    4.新终端：rosrun turtlesim turtle_teleop_key
+	        说明：键盘控制的节点；
+
+
+
+
+
+
+
+【3】.常见命令
+	1.命令，杂
+	    1.中断现有操作：Ctrl+C
+	    2.显示文件结构
+	        sudo apt install tree
+	        tree
+
+	    3.roswtf
+	        说明：错误诊断工具，检测安装错误，环境变量，配置错误；
+
+
+
+	1.rosnode（不详细）
+	    说明：node有关的命令；
+
+	    rosnode list
+	        说明：列出当前运行的node
+	        显示结果举例：/rosout /turtlesim
+
+	    rosnode info node_name
+	        说明：显示指定node的信息，包括该node"发布的topic"，"订阅的topic"，"提供的service"
+	        使用举例：rosnode info /rosout
+	        显示结果举例：
+		Node[/rosout]
+		Publications:...
+		Subscriptions:...
+		Services:...
+
+	    rosnode kill node_name
+	        说明：kill指定node；rosnode kill -a，关闭所有节点；
+
+
+	    rosnode ping node_name
+	        说明：测试指定node网络连接，一般用于测试运行在其他物理机上的node；
+
+	    rosnode machine_name
+	        说明：列出指定机器上的node
+	        疑问：machine_name是hostname？
+
+
+	    rosnode cleanup
+	        说明：清理不可达节点的注册信息
+
+	    rosnode help
+	        说明：帮助信息
+
+
+
+	2.rostopic
+	    说明：topic有关的命令；
+
+	    rostopic list
+	        说明：查看当前发布的topic
+
+	    rostopic info /camera/rgb/image_raw
+	        说明：查看某个topic的相关信息（如topic的数据类型，发布者，订阅者等）；上述为查看"/camera/rgb/image_raw"这个topic的信息；
+
+	    rostopic echo /cmd_vel
+	        说明：查看某个topic的内容；上述为查看"/cmd_vel"的内容；
+
+	    rostopic help
+	        说明：帮助信息；其他写法，rostopic -h；
+
+	    rostopic type [topic_name]
+	        说明：显示该topic对应的数据类型；举例：rostopic type /turtle1/command_velocity；显示输出结果，turtlesim/Velocity；
+
+
+	    rostopic echo [topic]
+	        说明：查看topic的内容；举例，rostopic echo /turtle1/command_velocity；输出内容如下：
+	        linear:2.0
+	        angular:0.0
+	        ---
+	        linear:2.1
+	        angular:0.0
+	        ...
+
+
+	    rostopic pub [topic_name] [topic_type] -- [content]
+	        说明：向[topic_name]这个topic发送数据，[topic_type]是topic的数据类型，要与[topic_name]的对应；[content]是需要发送的数据，格式需要与[topic_type]中定义的对应；
+	        举例：rostopic pub -1 /turtle1/command_velocity turtlesim/Velocity -- 4.0 1.8
+	        -1：仅发布一次，不是重复循环发送；
+	        /turtle1/command_velocity：topic名
+	        /turtlesim/Velocity：topic的数据类型
+	        4.0 1.8：topic内容，根据topic数据类型的定义写
+
+
+	    rostopic bw [topic_name]
+	        说明：（不详细）查看带宽
+
+	    rostpoic hz [topic_name]
+	        说明：（不详细）查看频率
+
+	    rostopic find [topic_type]
+	        说明：查找指定类型的topic
+
+
+
+	3.rosmsg
+	    说明：topic数据类型有关的命令；
+
+	    rosmsg show turtlesim/Velocity
+	        说明：msg表示topic的数据类型，有系统提供的，也有自定义的；命令的功能为查看某个数据类型的定义，上述为查看"turtlesim/Velocity"类型的定义，返回为：
+	        float32 linear
+	        foat32 angular
+
+	    rosmsg list
+	        说明：列出当前所有的topic数据类型；小疑问，是当前正在运行的功能包中用到的topic数据类型吗；
+
+	    rosmsg -h
+	        说明：帮助信息；
+
+	    rosmsg packages [message_name]
+	        说明：（不确定）好像是，查看所有用到[message_name]这种数据类型的功能包；如，rosmsg packages String
+
+
+	    rosmsg package [package_name]
+	        说明：查看[package_name]这个功能包中用到的所有topic数据类型；如，rosmsg package std_msgs；输出内容如下：
+	        std_msgs/Bool
+	        std_msgs/Byte
+	        std_msgs/String
+	        ...
+
+
+	    rosmsg show [package_name/message_name]
+	        说明：显示某个topic数据类型的定义；
+	        举例：rosmsg show std_msgs/String，返回内容为
+		string data
+
+	        举例：rosmsg show turtlesim/Velocity，返回内容为
+		float32 linear
+		float32 angular
+
+
+	    rosmsg md5
+	        说明：（不详细）显示消息的md5值
+
+
+
+	4.rosservice
+	    说明：service有关的命令；
+
+	    rosservice list
+	        说明：查看当前所有的service
+
+	    rosservice info /gazebo/delete_light
+	        说明：显示某个service的相关信息；"/gazebo/delete_light"是用于删除当前仿真环境中光源的service；运行结果如下
+	        Node: /gazebo
+	        Type：gazebo_msgs/DeleteLight
+	        Args：Light_name
+
+
+	    rosservice call /gazebo/delete_light sun
+	        说明：请求执行某个service；"/gazebo/delete_light"是删除仿真环境中某个光源的service；"sun"是该service的输入参数，表示删除"sun"这个光源；
+
+	    rosservice -h
+	        说明：帮助信息；
+
+	    rosservice type [service_name]
+	        说明：显示某个service的数据类型；如，rosservice type /spawn；返回数据为，turtlesim/Spawn；
+
+	    rosservice find [service_type]
+	        说明：（不详细）查找service的数据类型查找该类型的service；小疑问，是当前运行的node提供的所有service中查找吗；
+
+
+	    rosservice node [service_name]
+	        说明：查找提供某个service的node是哪个；小疑问，这个功能与rosservice info [service_name]是否有点重复吗；
+
+
+	    rosservice uri [service_name]
+	        说明：（不详细）显示服务ROSRPC的uri；
+
+
+	    rosservice args [service_name]
+	        说明：（不详细）显示指定service_name的args；
+
+
+
+	5.rossrv
+	    rossrv list
+	        说明：显示当前所有node发布的service中，用到的所有service的数据类型；
+
+	    rossrv show [service_name]
+	        说明：显示指定service的数据类型；
+
+	    rossrv show [service_type]
+	        说明：查询指定[service_type]数据类型的定义；如，rosservice show /Spawn，返回内容为
+	        float32 x
+	        float32 y		#小乌龟的坐标
+	        float theta		#小乌龟的方向
+	        string name		#申请的小乌龟名字
+	        ---
+	        string name		#实际显示的小乌龟名字
+
+
+	    rossrv md5 [service_name]
+	        说明：（不详细）显示指定service的md5值；
+
+	    rossrv [package_name]
+	        说明：（不详细）列出指定package中所有service数据格式；
+
+	    rossrv packages [service_name]
+	        说明：（不详细）列出使用指定[service_name]的所有功能包；小疑问，这些功能包随机放在任意路径的catkin工作空间中，可以都查到吗；
+
+
+
+
+
+
+
+	4.rosparam
+	    rosparam list
+	        说明：查看当前所有的parameter；
+
+	    rosparam get [param_key]
+	        说明：查看某个parameter的值；举例，rosparam get /gazebo/gravity_z，查看"/gazebo/gravity_z"这个参数的值，返回为-9.8；
+
+
+	    rosparam set [param_key] [param_value]
+	        说明：用于设置参数；设置参数后，需要调用/clear服务才显示效果；举例，改变小乌龟颜色的命令如下
+	        rosparam set background_b 100
+	        rosparam call clear
+
+
+	    rosparam list [param_value]
+	        说明：（不详细）显示该param_value对应的param_key；
+
+
+	    rosparam load [file_name]
+	        说明：（不详细）从文件加载参数
+
+	    rosparam dump param.yaml
+	        说明：（不确定）把当前所有的parameter都保存到param.yaml这个文件中，文件保存的路径是当前目录；
+
+
+	    rosparam delete param_key
+	        说明：（不详细）删除参数；
+
+
+	    load，dump的文件格式
+	        格式举例：
+		name:'xxx'
+		age:20
+		gender:'M'
+		score{Chinese:80,Math:90}
+		score_history:[80,82,88,90]
+
+	        说明：使用的yaml文件格式；格式总结1，key:name；格式总结2，score{Chinese:80,Math:90}、score_history:[80,82,88,90]，未知格式；
+
+
+
+	5.rospack
+	    说明：package管理工具；
+	    rospack help
+	        说明：帮助信息；
+
+	    rospack list
+	        说明：列出本机所有package；
+
+	    rospack depends [package_name]
+	        说明：显示package_name的依赖包；如果参数缺省，默认当前目录的package；该命令是读取各package中的package.xml文件得到有关信息；
+
+	    rospack find [package_name]
+	        说明：显示package_name的路径
+
+	    rospack profile
+	        说明：（不确定）刷新所有package的路径记录；
+
+
+
+
+	6.rosdep
+	    说明：package的依赖项管理工具；
+
+	    rosdep check [package_name]
+	        说明：检查该package需要的所有依赖包是否都装好；
+
+	    rosdep install [package_name]
+	        说明：安装指定package所需要的所有依赖包；
+
+	    rosdep install --from-paths src --ignore-src --rosdistro=kinetic -y
+	        说明：安装src路径下所有package的依赖包；依赖包信息由各个package中的package.xml文件指定；
+
+	    rosdep db
+	        说明：（不详细）生成和显示依赖数据库；
+
+	    rosdep init
+	        说明：（不详细）初始化/etc/ros/rosdep中的源；
+
+	    rosdep keys
+	        说明：（不详细）检查package的依赖是否满足；小疑问，与rosdep check相同吗；
+
+	    rosdep update
+	        说明：（不详细）更新本地的rosdep数据库；
+
+
+	7.roscd、rosls
+	    roscd [package_name]
+	    roscd [package_name/subdir]
+	        说明：（不确定）意思是可以直接跳转到指定[package_name]的路径吗，效果等同于cd命令逐级进去，只是方便点吗；
+	        与source的关系：roscd只会查找ROS_PACKAGE_PATH路径下的功能包；所以对于需要使用roscd跳转的package，首先需要使用source命令将工作空间路径加入ROS_PACKAGE_PATH路径；
+
+	    roscd log
+	        说明：（不详细）进入日志所在目录；
+
+
+	    rosls [package_name]
+	    rosls [package_name/subdir]
+	        说明：列出指定package中的文件，文件夹，与roscd类似；
+
+
+
+
+
+
+
+【4】."ROS-Academy-for-Beginners"教学包
+	说明：以下为安装"ROS-Academy-for-Beginners"教学包；涉及知识点主要与ROS各命令有关，比较杂；教学包下载地址，"https://github.com/redblue1987/DroidAITEch"；
+
+
+	1.下载源码
+	    1.检查git是否安装
+	        sudo apt-get install git
+
+	    2.创建空的文件夹
+	        mkdir -p tutorial_ws/src
+	        cd turorial_ws/src
+
+	    3.下载教学包
+	        git clone https://github.com/DroidAITech/ROS-Academy-for-Beginners.git
+	        说明：教学包的地址可能发生变化，实际可用的可能是https://github.com/redblue1987/DroidAITEch
+
+
+	2.安装所需依赖包
+	    cd ~/tutorial_ws
+	    rosdep install --from-paths src --ignore-src --rosdistro=kinetic -y
+
+
+	3.检查gazebo版本
+	    gazebo -v
+	        说明：如果版本低于7.0，以下为升级gazebo步骤
+
+	    sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+
+	    wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+	    sudo apt-get update
+	    sudo apt-get install gazebo7
+
+
+	4.编译教学包
+	    cd ~/tutorial_ws
+	    catkin_make
+
+
+	5.添加工程路径到 "环境变量"
+	    1.临时添加（新打开终端需要重新添加）
+	        source ~/tutorial_ws/devel/setup.bash
+	        rospack profile
+	        说明：临时添加，新打开终端需要重新添加；
+	        小疑问：rospack profile的作用是什么吗；
+
+	    2.永久添加
+	        echo "source ~/tutorial_ws/devel/setup.bash" >> ~/.bashrc
+	        说明：加入~./bashrc文件
+
+
+
+	6.运行使用，机器人键盘控制
+	    1.命令行界面
+	        rospack profile
+	        roslaunch robot_sim_demo robot_spawn.launch
+	        说明：生成机器人仿真界面；
+	        小疑问："rospack profile"的作用是什么吗；
+
+	    2.再打开一个终端
+	        rosrun robot_sim_demo robot_keyboard_teleop.py
+	        说明：使用按键"ijk"，控制机器人的移动
+
+
+
+	7.运行使用，topic有关
+	    1.启动仿真
+	        roslaunch robot_sim_demo robot_spawn.launch
+	        rosrun robot_sim_demo robot_keyboard_teleop.py
+	        说明：打开一个机器人的仿真界面，一个键盘输入界面，使用"ijk"按键可以控制机器人移动；
+
+
+	    2.查看当前所有topic
+	        rostopic list
+
+	    3.查看某个topic详细信息
+	        rostopic info /camera/rgb/image_raw
+
+
+	    4.查看相机图像信息
+	        rosrun image_view image_view image:=/camera/rgb/image_raw
+
+	    5.查看某个topic中的具体信息
+	        rostopic echo /cmd_vel
+
+
+
+	7.运行使用，service有关
+	    1.启动仿真
+	        roslaunch robot_sim_demo robot_spawn.launch
+	        rosrun robot_sim_demo robot_keyboard_teleop.py
+
+	    2.查看当前所有service
+	        rosservice list
+
+	    3.查看某个service的有关信息
+	        rosservice info /gazebo/delete_light
+	        说明："/gazebo/delete_light"是删除仿真环境中某个光源的service；运行结果如下；
+	        Node: /gazebo
+	        Type：gazebo_msgs/DeleteLight
+	        Args：Light_name
+
+
+	    4.执行某个service
+	        rosservice call /gazebo/delete_light sun
+	        说明："/gazebo/delete_light"是删除仿真环境中某个光源的service；"sun"是上述service的输入参数；执行后返回信息为，"success: True, sun successfully deleted"
+
+
+
+	8.运行使用，parameter有关
+	    1.启动仿真
+	        roslaunch robot_sim_demo robot_spawn.launch
+	        rosrun robot_sim_demo robot_keyboard_teleop.py
+
+	    2.查看当前所有parameter
+	        rosparam list
+
+
+	    3.查看某个parameter的值
+	        rosparam get /gazebo/gravity_z
+	        说明：查询重力加速的的值，输出结果为"-9.8"
+
+	    4.保存当前所有parameter到文件
+	        rosparam dump param.yaml
+	        说明：保存当前所有parameter到param.yaml文件，文件存放在当前目录下；
+
+
+
+
+
+
+
+
+【5】.topic数据类型
+	1.杂
+	    说明：ros中数据类型希望做到与编程语言无关，即在ros中使用的的数据类型，在编译时会把这些数据类型转换成特定语言的代码；
+	    ros中数据类型：ros中的数据类型包括2种，基本数据类型（如，整型，浮点型，布尔变量，数组）、构成数据类型（由上述基本类型构成的矩阵，图像，传感器等类型）；
+
+
+	2.基本数据类型
+	    二进制：bool
+	    整型：int8，int16，int32，int64
+	    浮点型：float，float64
+	    字符串：string
+	    其他：time，duration，header（不详细）
+	    数组：
+	        1.可变长度数组：array[]
+	        2.固定长度数组：array[C]
+
+
+	3.常见构成数据类型，std_msgs
+	    1.std_msgs/Header.msg
+	        uint32 seq		#数据ID
+	        time stamp		#时间戳
+	        string frame_id	#数据的参考坐标系
+	        说明：头部msg，常常用于其他msg的开头；
+
+
+	4.常见构成数据类型，geometry_msgs
+	    1.geometry_msgs/Vector3.msg
+	        float64 x
+	        float64 y
+	        float64 z
+	        说明：向量msg
+
+	    2.geometry_msgs/Accel.msg
+	        Vector3 linear
+	        Vector3 angular
+	        说明：加速度msg
+
+	    3.geometry_msgs/Quaternion.msg
+	        float64 x
+	        float64 y
+	        float64 z
+	        float64 w
+	        说明：四元数msg
+
+	    4.geometry_msgs/Point.msg
+	        float64 x
+	        float64 y
+	        float64 z
+	        说明：空间中点的位置
+
+
+	    5.geometry_msgs/Pose
+	        Point point
+	        float64[36] covariance
+	        说明：空间点位置+36位方差数组（空间中含有不确定性的位姿信息）
+
+	    6.geometry_msgs/PoseStamped.msg
+	        Header header
+	        Pose pose
+	        说明：时间+空间点位置（具有时空基准的位姿）
+
+
+	    7.geometry_msgs/Twist.msg
+	        Vector3 linear
+	        Vector3 angular
+	        说明：线速度+角速度
+
+
+	    8.geometry_msgs/TwistWithCovariance.msg
+	        Twist twist
+	        float64[36] covariance
+	        说明：线速度+角速度+36位方差数组
+
+
+
+
+
+
+
+
+【6】.service数据类型
+	1.关于service数据类型
+	    格式举例：msgs_demo/DetectHuman.srv
+	        bool start_detect
+	        ---
+	        my_pkg/HumanPose[] pose_data
+
+	    说明：---，上方是请求的数据部分，下方是应答的数据部分；嵌套，可以嵌套msg数据类型，不能嵌套service数据类型，因为service数据类型分请求部分，应答部分；文件后缀，topic数据类型的文件后缀为.msg，service数据类型的文件后缀为.srv；
+
+
+
+	2.常见service数据类型，std_srvs
+	    1.std_srvs/Empty.srv
+	        ---
+	        说明：代表一个空的srv类型
+
+
+	    2.std_srvs/SetBools.srv
+	        bool data		#启动或者关闭硬件
+	        ---
+	        bool success		#标示硬件是否成功运行
+	        string messages	#运行信息
+	        说明：不详细
+
+
+	    3.std_srvs/Trigger.srv
+	        ---
+	        bool success		#标示srv是否成功运行
+	        string message	#返回信息，如错误信息等
+	        说明：不详细
+
+
+
+	3.常见service数据类型，nav_msgs
+	    1.nav_msgs/GetMap.srv
+	        ---
+	        nav_msgs/OccupancyGrid map
+	        说明：（不详细）获取地图，请求部分为空；
+
+
+	    2.nav_msgs/GetPlan.srv
+	        geometry_msgs/PoseStamped start	#起始点
+	        geometry_msgs/PoseStamped goal	#目标点
+	        float32 tolerance			#允许误差
+	        ---
+	        nav_msg Path plan
+	        说明：得到一条从当前位置到目标位置的路径；
+
+
+	    3.nav_msgs/SetMap.srv
+	        nav_msgs/OccupancyGrid map
+	        geometry_msgs/PoseWithCovarianceStamped initial_pose
+	        ---
+	        bool success
+	        说明：以初始位置为基准，设定新地图；
+
+
+
+	4.常见service数据类型，sensor_msgs
+	    1.sensor_msgs/SetCameraInfo.srv
+	        sensor_msgs/CamaraInfo camera_info	#相机信息
+	        ---
+	        bool success		#如果调用成功，则返回true
+	        string status_message	#给出调用成功的细节
+	        说明：通过给定的CameraInfo相机信息，对相机进行标定；
+
+
+
+
+
+
+
+
+【7】.parameter server数据类型
+	1.杂
+	    说明：ROS的参数服务器使用XMLRPC数据类型，包括如下数据类型；（不详细）
+	    数值类：booleans、integers、floats
+	    字符类：strings
+	    未知类：lists、dictionaries、iso8601 dates、base64-encoded data
+
+
+
+
+
+
+
+【8】.action数据类型
+	1.杂
+	    格式举例
+	        uint32 dishwasher_id		#定义数据，目标(部分1)
+	        ---
+	        float32 percent_complete	#定义数据，结果(部分3)
+	        ---
+	        uint32 total_dished_cleaned	#定义数据，反馈(部分2)
+
+	    说明：（杂）文件类型，点action文件；Actionlib是实现action的一个metapackage；
+
+
+
+	2.常见action数据类型，nav_msgs
+	    1.nav_msgs/GetMap.action
+	        ---
+	        nav_msgs/OccupancyGrid map
+	        ---
+	        说明：获取地图信息；小疑问，请求信息为空吗；
+
+
+	3.常见action数据类型，geometry_msgs
+	    1.geometry_msgs/MoveBase.action
+	        geometry_msgs/PoseStamped target_position
+	        ---
+	        ---
+	        geometry_msgs/PoseStamped base_position
+	        说明：不详细；
+
+
+
+	4.自定义action数据类型
+	    1.AddTwoInts.action
+	        int64 a
+	        int64 b
+	        ---
+	        int64 sum
+	        ---
+	        说明：两个整数求和；
+
+	    2.AutoDocking.action
+	        #goal
+	        ---
+	        #result
+	        string text
+	        ---
+	        #feedback
+	        string state
+	        string text
+	        说明：不详细；
+
+
+
+
+
+
+
+
+【9】.catkin，工作空间
+	1.杂
+	    1.代码编译器演变：少量文件，linux自带编译器gcc、g++；gcc、g++编译过程为，hello.cpp-->hello.o-->hello；文件增加：makefile文件，make工具；工程变大，CMakeLists.txt文件，cmake工具；ros，CMakeList.txt文件，catkin工具（catkin是cmake的扩展）；
+
+	    2.ros编译器历史：早期ros的编译系统，rosbulid；Groovy版本后：catkin；ROS2编译系统：Ament；目前ros1编译器同时支持rosbuild，catkin，但rosbuild逐步淘汰；
+
+	    3.工程结构：一个项目，对应建立一个catkin软件包；catkin中对每个功能建立对应的package；package是catkin编译的基本单元（编译对象是一个个package）；
+
+	    4.package中两个文件简介：package.xml，package的描述信息；CMakeLists.txt，编译信息；
+
+
+
+	2.工作空间结构
+	    说明：在Fuerte版本之后，ROS默认使用的是catkin工作空间；典型的catkin工作空间包括4个目录空间；
+	    src，代码空间（source space）：存放源代码；
+	    build，编译空间（build space）：存放编译过程中的中间文件；
+	    devel，开发空间（development space）：存放编译完成的可执行文件；
+	    install，安装空间（install space）：使用make install可以将可执行文件安装到这里（小疑问，那意思是还可以安装到其他地方，这个是默认的安装位置吗）；安装空间不是必须的，有些就没有；
+
+
+
+	3.工作空间结构，具体文件
+	    workspace_folder/
+	        src/
+		CMakeLists.txt		//顶层的CMake文件
+		package_1/
+		    CMakeLists.txt		//每个package的CMake
+		    package.xml
+		    ...
+		package_2/
+		    CMakeLists.txt
+		    package.xml
+		    ...
+
+	        build/
+		CATKIN_IGNORE/
+
+	        devel/
+		bin/
+		etc/
+		include/
+		lib/
+		share/
+		.catkin
+		env.bash
+		setup.bash
+		setup.sh
+		...
+
+	        install/
+		bin/
+		etc/
+		include/
+		lib/
+		share/
+		.catkin
+		env.bash
+		setup.bash
+		setup.sh
+		...
+
+
+
+
+	4.创建工作空间
+	    1.创建工作空间
+	        mkdir -p ~/catkin_ws/src
+	        cd ~/catkin_ws/src
+	        catkin_make
+	        说明：mkdir -p，一次创建多级目录，否则一次只能创建一级；
+
+	        说明：仍然保留原先的初始化命令，catkin_init_workspace；原先使用2个命令，初始化使用catkin_init_workspace，添加package后编译使用catkin_make；
+
+
+	    2.编译
+	        cd ~/catkin_ws
+	        catkin_make
+	        说明：编译整个工作空间，也可以在加入具体代码后，再编译；编译后，会自动生成build，devel文件夹；在devel文件夹中有多个setup.*sh环境变量脚本；
+	        说明：如果使用cmake，make工具，则步骤如下（重复），cd ~/catkin_ws/devel && cmake ../ && make
+
+
+	    3.环境变量
+	        source devel/setup.bash
+		说明：设置环境变量，以便在终端中可以运行编译出来的可执行文件（否则直接在终端中输入可执行文件名，会提示未定义该命令，即找不到）
+
+	        echo "source /catkin_ws/devel/setup.bash">>~.bashrc
+		说明：上述source方式设置环境变量，仅在当前终端窗口中有效；如果要所有终端窗口中有效，使用上述命令；将setup.bash内容加入~.bashrc文件，该文件在每次新建终端时会自动运行一次；
+
+	        echo $ROS_PACKAGE_PATH
+		说明：检查是否设置环境变量成功；设置环境变量后，会把当前存放可执行变量的地址，加入ROS_PACKAGE_PATH环境变量中；并且新source的地址放在前面；终端中执行命令时，依次从ROS_PACKAGE_PATH中的地址中去找，是否存在该命令；
+		ROS_PACKAGE_ROS的值举例：/home/xxx/catkin_ws/src: /opt/ros/indigo/share: /opt/ros/indigo/stacks；第一次地址即source时加入的；
+
+
+
+	5.catkin_make部分参数
+	    -h
+	        说明 ：帮助信息
+
+	    --pkg [package_name]
+	        说明：只编译指定的package；
+
+
+	    --force-cmake
+	        说明：强制从头编译；如果编译中断过，再次catkin_make会默认从中断的进度继续编译；添加上述参数，会强制从头开始编译；小疑问，是否删除编译生成的"build"、"devel"文件夹，再次编译效果相同，都是从头开始编译；
+
+	    --source [source_directory]
+	        说明：指定src的路径，默认的src路径为"工作空间/src"；如果代码放在"~/工作空间/test/src"，则需要该参数指定；
+
+
+	    -C [DIRECTORY]
+	    --directory [DIRECTORY]
+	        说明：指定工作空间的地址，即使当前所在目录不是工作空间，也可以catkin_make；
+
+
+
+
+
+
+
+
+
+
+【10】.catkin，功能包
+	1.杂
+	    1.ROS中package的文件形式
+	        my_package/
+		CMakeLists.txt
+		package.xml
+		...
+
+	    2.说明：package.xml是提供功能包的元信息；CMakeLists.txt是提供编译有关设置；ROS不允许功能包中嵌套功能包，多个功能包必须平行放置在src中；
+
+
+
+
+	2.创建package
+	    1.创建命令格式
+	        catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
+	        说明：即依次输入功能包名称（package_name），依赖的包的名称（dependn）
+
+	    2.创建功能包举例
+	        cd ~/catkin_ws/src
+	        catkin_create_pkg learning_communication std_msgs rospy roscpp
+
+	    3.编译，设置环境变量
+	        cd ~/catkin_ws
+	        catkin_make
+	        source ~/catkin_ws/devel/setup.bash
+
+
+
+	3.默认创建文件
+	    说明：使用catkin_create_pkg创建package后，默认创建的文件如下；
+	    my_package/
+	        CMakeLists.txt
+	        package.xml
+	        src/
+	        include/my_package/
+
+
+	4.package，文件夹命名
+	    说明：使用catkin_create_pkg创建package后，默认创建的文件夹有"src"、"include"，其他文件夹根据需要自行创建；建议使用约定俗称的文件夹名；
+	    src/
+	        说明：存放源代码；点cpp、点py文件；
+
+	    include/
+	        说明：存放c++头文件；点h文件；
+
+	    scripts/
+	        说明：存放可执行脚本；点sh（shell脚本），点py（python脚本）；
+
+	    msg/
+	        说明：自定义topic的数据格式；点msg文件；
+
+	    srv/
+	        说明：自定义service的数据格式；点srv文件；
+
+	    action/
+	        说明：自定义action的数据格式；点action文件；
+
+	    models/
+	        说明：机器人和周围场景的3D模型文件，相比udrf文件定义简单的形状，dae/stl文件可以定义复杂的模型，可以从solidworks等软件直接导出；用于仿真环境；后缀，点sda，点stl，点dae等文件；
+
+	    urdf/
+	        说明：机器人模型描述，包括连杆，关节，位置，角度等信息，用于可视化调试与仿真中显示；点udrf，点xacro文件；
+
+	    launch/
+	        说明：指定要启动哪些package中的哪些可执行文件，批量rosrun各种node；点launch，点xml文件；
+
+
+	    param/
+	        说明：（不确定）存放parameter server的参数，其中parameter server(参数服务器)是master的一部分；通常由点launch文件读取点yaml文件，并加载到parameter server(参数服务器)上；点yaml文件；
+
+
+	    rviz/
+	        说明：rviz软件的配置（显示哪些空间，视角）；rviz软件内直接保存参数得到，不是自己新建的；后缀，点rviz文件；
+
+
+
+
+
+
+
+
+
+
+
+【11】.CMakeLists.txt文件（不详细）
+	1.杂
+	    说明：CMakeLists.txt原本是CMake编译系统的规则文件，而catkin编译系统基本沿用了CMake的编程风格，只是针对ROS工程添加了一些宏定义；
+
+
+	2.cmake_minimum_required(VERSION 2.8.3)（不详细）
+	    说明：指定CMake的版本号，CMake版本至少2.8.3；
+
+
+	3.project(turtlesim)（不详细）
+	    说明：指定项目名称；上述指定项目名称为"turtlesim"；之后可用${PROJECT_NAME}代替项目名称turtlesim；
+
+
+	4.find_package()（不详细）
+	    说明：（不详细）依赖其他package的信息；格式不清楚，部分举例如下；
+	    find_package(catkin REQUIRED COMPONENTS geometry_msgs message_generation rosconsole roscpp roscpp_serialization roslib rostime std_msgs std_srvs)
+	    find_package(Qt5Widgets REQUIRED) 
+	    find_package(Boost REQUIRED COMPONENTS thread)
+
+
+	5.include_directories()（不详细）
+	    说明：（不详细）添加c++头文件路径；格式不清楚，部分举例如下；
+	    include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+
+
+	6.link_directories()（不详细）
+	    说明：（不详细）指定链接库地址；格式不清楚，部分举例如下；
+	    link_directories(${catkin_LIBRARY_DIRS})
+
+
+	7.catkin_python_setup()（不详细）
+	    说明：（不详细）cmake编译系统中没有，是catkin编译系统新加的宏定义，用于catkin的Python Module支持；
+
+
+	8.add_message_files()（不详细）
+	    说明：添加自定义Message文件；格式不清楚，部分举例如下；
+	    add_message_files(DIRECTORY msg FILES  Color.msg Pose.msg)
+
+
+	9.add_service_files()（不详细）
+	    说明：(不详细)添加自定义Service文件；格式不清楚，部分举例如下；
+	    add_service_files(DIRECTORY srv FILES Kill.srv SetPen.srv Spawn.srv TeleportAbsolute.srv TeleportRelative.srv)
+
+
+	8.add_action_files()（不详细）
+	    说明：（不详细）添加自定义Action文件；
+
+
+
+	9.generate_message()（不详细）
+	    说明：用于生成不同语言版本的msg/src/action接口；小疑问，意思如果有add_message，add_service，add_action等自定义的数据结构，那么要加generate_message，用于生成c语言的头文件，python的module，其他语言的对应文件；格式不清楚，部分举例如下；
+	    generate_messages(DEPENDENCIES geometry_msgs std_msgs std_srvs)
+
+
+	10.catkin_package()（不详细）
+	    作用：（不详细），部分举例如下；
+	    catkin_package(CATKIN_DEPENDS geometry_msgs message_runtime std_msgs std_srvs)
+
+
+	11.set()（不详细）
+	    作用：（不详细）；部分举例如下；
+	    set(turtlesim_node_SRCS src/turtlesim.cpp src/turtle.cpp src/turtle_frame.cpp)
+	    set(turtlesim_node_HDRS include/turtlesim/turtle_frame.h)
+
+
+	12.add_library()
+	    作用：（不详细）
+
+	13.add_executable()
+	    作用：（不详细）
+
+	14.add_dependencies()
+	    作用：（不详细）
+
+	15.target_link_libraries()
+	    作用：（不详细）
+
+	16.catkin_add_gtest()
+	    作用：（不详细）
+
+	17.install()
+	    作用：（不详细）
+
+	18.qt5_wrap_cpp()
+	    作用：（不详细），部分举例如下；
+	    qt5_wrap_cpp(turtlesim_node_MOCS ${turtlesim_node_HDRS})
+
+
+
+
+
+
+
+
+
+
+【12】.package.xml文件
+	1.杂
+	    说明：package.xml是软件包的描述文件；老版本文件名（rosbuild编译系统）使用manifest.xml；新版本文件package.xml的版本：format1、format2（差别不大，现有kinetic两种format都支持）；作用，rospack find，rosdep等指令查询信息时，在package.xml中找；文件格式，遵循xml标签文本写法；
+
+
+	2.格式举例
+<?xml version="1.0"?>
+<package>
+
+    <name>turtlesim</name>
+
+    <version>0.8.1</version>
+
+    <description>
+    turtlesim is a tool made for teaching ROS and ROS packages. 
+    </description>
+
+    <maintainer email="dthomas@osrfoundation.org">
+    Dirk Thomas
+    </maintainer>
+
+    <license>BSD</license>
+
+    <url type="website">http://www.ros.org/xxx</url>
+    <url type="bugtracker">https://github.com/xxx</url> 
+    <url type="repository">https://github.com/xxx</url>
+
+    <author>Josh Faust</author>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <build_depend>geometry_msgs</build_depend>
+    <build_depend>qtbase5-dev</build_depend>
+
+    <run_depend>geometry_msgs</run_depend>
+    <run_depend>libqt5-core</run_depend>
+
+</package>
+
+
+	3.格式解释
+	    <?xml version="1.0"?>
+	        说明：指定xml版本；package.xml文件的format1，2在<package>标签中指定，不是<version>标签；<version>标签中，version="1.0"固定不变；
+
+	    <package>
+	        说明：根标签文件；全文档以<package>开头，</package>结尾；如果package.xml文档使用format1，则使用如下根标签对，<package>...</package>；如果package.xml文档使用format2，则使用如下根标签对，<package format="2">...</package>；
+
+
+	    <name>package_name</name>
+	        说明：设定package名称；举例如下，<name>turtlesim</name>
+
+	    <version>0.8.1</version>
+	        说明：指定版本号；
+
+
+	    <description>...</description>
+	        说明：关于package的简介信息；举例如下，
+	        <description>
+	        turtlesim is a tool made for teaching ROS and ROS packages. 
+	        </description>
+
+
+	    <maintainer>
+	        说明：package的维护者信息；举例如下
+	        <maintainer email="dthomas@osrfoundation.org">
+	        Dirk Thomas
+	        </maintainer>
+
+
+	    <license>BSD</license>
+	        说明：软件许可证信息；
+
+
+	    <url type="...">...</url>
+	        说明：相关网址信息，举例如下；
+	        <url type="website">http://www.ros.org/xxx</url>
+	        <url type="bugtracker">https://github.com/xxx</url> 
+	        <url type="repository">https://github.com/xxx</url>
+
+
+	    <author>Josh Faust</author>
+	        说明：作者；
+
+
+	    <buildtool_depend>catkin</buildtool_depend>
+	        说明：（不详细）编译依赖工具，通常是catkin；小疑问，此处仅仅是描述信息，可以乱写，与实际编译过程无关吗；
+
+
+	    <build_depend>
+	        说明：（不详细）编译依赖项；
+	        <build_depend>geometry_msgs</build_depend>
+	        <build_depend>qtbase5-dev</build_depend>
+
+
+	    <run_depend>
+	        说明：（不详细）运行依赖项
+	        <run_depend>geometry_msgs</run_depend>
+	        <run_depend>libqt5-core</run_depend>
+
+
+
+
+	4.格式解释，format2（不详细）
+	    说明：如果package.xml文档是format2的，则下面的项会有不同，其他与format1的package.xml文档相同；
+
+	    <buildtool_depend>
+	        说明：（不详细）编译依赖工具，通常是catkin，与format1相同；小疑问，是否与后面的项目重复了吗；
+
+
+	    <depend>
+	        说明：（不详细）编译，导出，运行都需要的依赖项；编译，导出，运行都需要的写这里，在build_depend，build_export_depend，run_depend处不用再写；
+
+	    <build_depend>
+	        说明：（不详细）编译依赖项；单独编译用的，导出，运行不用；
+
+	    <build_export_depend>
+	        说明：（不详细）导出依赖项；单独导出用的，编译，运行不用；
+
+	    <run_depend>
+	        说明：（不详细）运行依赖项；单独运行用的，编译，导出不用；
+
+	    <test_depend>
+	        说明：（不详细）测试用例依赖项；
+
+	    <doc_depend>
+	        说明：（不详细）文档依赖项；
+
+
+
+
+
+
+
+
+
+
+【13】.metapackage
+	1.杂
+	    说明：名称演变，ROS的Hydro版本前，称为Stack，功能包集；ROS的Hydro版本及之后，称为Metapackage；作用，功能相近的几个package放一起；层级，catkin>metapackage>package；
+	    小疑问，文件存放目录上有区别吗，还是catkin中多个package平行存放吗；
+
+
+	2.CMakeLists.txt文件（不详细）
+	    说明：每个package有自己的CMakeLists.txt和package.xml文件；同时metapackage也有CMakeLists.txt和package.xml文件；其中CMakeLists.txt文件内容固定，共4条，即声明本package是一个metapackage；
+	    CMakeLists.txt文件内容：
+	        cmake_minimum_required(VERSION 2.8.3)
+	        project(ros_academy_for_beginners)
+	        find_package(catkin REQUIRED)
+	        catkin_metapackage()
+
+
+
+	3.package.xml文件（不详细）
+	    说明：metapackage的package.xml文件，需要使用fotmat1；此外其他要求如下所示（不完整，仅列举几个要求）
+
+	    1.</package>标签前添加固定格式内容
+<?xml version="1.0"?>
+<package>
+
+    ...
+    <export>
+        <metapackage/>
+    </export>
+
+<package>
+
+	    2.杂
+	        1.Metapackage中包含的所有的package，都添加到<run_depend>标签中；
+
+	        2.没有<build_depend>，<build_export_depend>标签；
+	        3.<buildtool_depend>标签设为catkin
+
+
+
+	4.ROS常见中Metapackage
+	    navigation
+	        说明：导航相关
+
+	    moveit
+	        说明：运动规划，机械臂
+
+	    image_pipeline
+	        说明：图像处理
+
+	    vision_opencv
+	        说明：ROS与OpenCV交互
+
+	    turtlebot
+	        说明：Turtlebot机器人相关
+
+	    pr2_robot
+	        说明：pr2机器人驱动
+
+
+
+	5.navigation中的功能包
+	    说明："navigation"是ROS中的metapackage；作用与导航相关，其中包含多个功能包，下面仅举例部分；
+
+	    navigation
+	        说明：不详细；
+
+	    amcl
+	        说明：定位
+
+	    fake_localization
+	        说明：定位
+
+	    map_server
+	        说明：提供地图
+
+	    move_base
+	        说明：路径规划节点
+
+	    nav_core
+	        说明：路径规划的接口
+
+	    base_local_planner
+	        说明：局部规划
+
+	    dwa_local_planner
+	        说明：局部规划
+
+
+
+
+
+
+
+
+
+
+
+【14】.rosbuild，工作空间
+	1.杂
+	    说明：rows全称，ROS Workspace；rows属于rosinstall功能包，需要先安装rosinstall功能包；
+
+
+
+	2.新建工作空间
+	    rows init ~/rosbuild_workspace /opt/ros/kinect
+	    说明："~/rosbuild_workspace"表示工作空间名与路径；小疑问，"/opt/ros/kinect"表示ROS版本信息，作用未知；
+	    空的工作空间包括文件：setup.bash、setup.sh、setup.zsh、点rosinstall（隐藏文件）；
+
+
+	3.添加环境变量
+	    1.临时添加
+	        source ~/rosbuild_workspace/setup.bash
+	    2.永久添加
+	        echo "source ~/rosbuild_workspace/setup.bash" >> ~/.bashrc
+
+
+	4.查看工作空间是否创建成功
+	    rows info
+	    说明：如果返回结果中有："workspace:/home/user_name/rosbuild_workspace"，则表示创建成功；小疑问，好像是需要source之后才能这样查询，即这个命令也是查看ROS_PACKAGE_PATH变量的吗；
+
+
+	5.创建sandbox目录
+	    说明：sandbox目录相当于catkin工作空间中的src目录，即存放源代码的目录；
+	    mkdir ~/rosbuild_workspace/sandbox
+	    rows set ~/rosbuild_workspace/sandbox
+	        说明：将sandbox目录添加到.rosinstall文件；
+
+	    source ~/rosbuild_workspace/setup.bash
+	        说明：添加新目录到环境变量；小疑问，上面不是只是修改了.rosinstall文件，没有修改setup.bash文件吗；
+
+
+	6.查看是否成功添加sandbox到"环境变量"
+	    方法1：rows info
+	        说明：看输出结果横线下是否有sandbox
+
+	    方法2：echo $ROS_PACKAGE_PATH
+	        说明：把环境变量中所有路径打印，不同路径之间冒号分隔；查看是否有sandbox目录；
+
+
+
+
+
+
+
+
+
+
+
+
+【15】.rosbuild，功能包
+	1.杂
+	    说明：新建package后，自动生成文件包括CMakeLists.txt，manifest.xml；
+
+
+	2.新建package
+	    cd ~/rosbuild_workspace/sandbox
+	        说明：package建立在sandbox下，sandbox类似catkin的src文件夹；
+
+	    roscreate_pkg beginner_tutorials std_msgs rospy roscpp
+	        说明：格式为，"roscreate_pkg [package_name] [depends_name]"；在catkin工作空间中，新建package的命令为catkin_create_pkg；
+
+	    rospack find beginner_tutorials
+	        说明：验证是否建立成功，返回功能包的绝对路径；
+
+
+	3.编译package
+	    rosmake [package_name]
+	    rosmake [package_name] -pre-clean
+	    说明：上述为编译package命令；-pre-clean参数表示清除原先编译信息，从头开始编译；如果编译成功会提示"0 failures"；
+
+
+
+
+
+
+
+
+
+
+
+
+【16】.工作空间覆盖
+	1.工作空间的覆盖（Overlaying）
+	    1.说明：同一个工作空间下，不允许存在同名的功能包，否则编译售会报错；ROS允许多个工作空间存在，不同工作空间中可以有同名的功能包；每个工作空间都通过source命令将可执行文件路径加入ROS_PACKAGE_PATH变量中；那么，当多个工作空间中存在同名功能包（package）时，会执行哪一个？
+
+	    2.多个工作空间中同名功能包执行顺序：通过source新设置的路径会放在ROS_PACKAGE_PATH变量的前面；在终端中输入可执行文件名时，会依次在各个路径中查找，路径名靠前的同名功能包会被执行；（即Overlaying机制）
+
+	    3.查看环境变量命令：
+	        echo $ROS_PACKAGE_PATH
+	        env | grep ros
+
+	    4.工作空间覆盖举例：
+	        sudo apt-get install ros-kinetic-ros-tutorials
+	        rospack find roscpp_tutorials
+	        说明：安装ROS自带的tutorial，在该工作空间中，有roscpp-tutorials功能包；使用rospack find xxx命令可以查看功能包安装位置；返回数据为，/opt/ros/kinetic/share/roscpp_tutorials（该路径是ROS默认的安装路径）
+
+	        cd ~/catkin_ws/src
+	        git clone git://github.com/ros/ros_tutorials.git
+	        cd ~/catkin_ws/src
+	        catkin_make
+	        source .devel/setup.bash
+	        rospack find roscpp_tutorials
+	        说明：在catkin_ws工作空间，下载ros_tutorials，里面有同名的roscpp_tutorials功能包；source之后，查看ROS_PACKAGE_PATH变量中各个地址的顺序；返回数据为，/home/xxx/catkin_ws/src/roscpp_tutorials: xxx；则在终端运行roscpp_tutorials有关命令时，会优先到上述地址查找；
+
+
+
+	2.覆盖机制的风险
+	    1.举例，如下两个同名的功能包：
+	        catkin_ws/
+		src/
+		    package_a
+		    package_b	//功能包b依赖功能包a
+		build/
+		...
+
+
+	        overlay_ws/
+		src/
+		    package_a
+		build/
+		...
+
+	    2.说明：如果overlay_over工作空间覆盖catkin_ws，并且在catkin_ws中，功能包b依赖功能包a；此时，catkin_ws中的package_a会被overlay_ws中的package_a覆盖，但是package_b并不知道依赖的package_a已经发生了变化，可能会存在问题；
+
+
+
+
+
+
+
+
+
+
+
+
+【17】.关于Eclipse开发环境
+	1.杂
+	    1.非IDE编程常用：vim，gedit等
+	    2.常见IDE：Eclipse，Qt Creator，Pycharm，RoboWare等
+	    3.ROS官方有关ide的信息：wiki，http://wiki.ros.org/IDEs
+
+
+	2.安装Eclipse（不详细）
+	    1.安装Java环境
+	        说明：Eclipse是基于Java开发的，所以需要Java运行环境；Java官方网站，http://www.oracle.com/technetwork/java/javase/downloads/index.html；可以下载安装Java的Linux版的JDK（Java Develoment Kit）或者JRE（Java Running Environment）；
+	        验证安装是否成功：java -version
+
+	    2.下载Eclipse IDE
+	        说明：登录Eclipse的官方网站，http://www.eclipse.org/downloads/，下载Linux版的Eclipse IDE for C/C++ Developers；下载完成后，不需要安装，只要解压，点击可执行文件即可运行；可以创建快捷方式放到桌面；
+
+
+	3.Eclipse使用，创建Eclipse工程文件
+	    说明：catkin编译系统可以直接生成Eclipse的工程文件，命令如下
+	    1.生成Eclipse工程文件：
+	        cd ~/catkin_ws
+	        catkin_make --force-cmake -G"Eclipse CDT4 - Unix Makefiles"
+	        说明：在build文件夹中，已经生成".cproject"，".project"隐藏文件；在终端窗口，可以通过ls -a查看；在GUI窗口，可以使用快捷键"Ctrl+H"查看隐藏文件；
+
+	    2.设置终端的环境变量到Eclipse（没看懂）
+	        awk -f $(rospack find mk)/eclipse.awk build/.project > build/.project_with_env && mv build/.project_with_env build/.project
+
+	    3.如果需要调试程序，需要把代码编译成debug版本
+	        cd ~/catkin_ws/build
+	        cmake ../src -DMAKE_BUILD_TYPE=Debug
+	        小疑问：在Eclipse中不是也有编译选项吗，如果需要调试程序，则需要在Eclipse外面，先用cmake编译吗，且这里没有用make进行下一步编译
+
+
+	4.Eclipse使用，工程导入Eclipse
+	    步骤：Eclipse软件，菜单栏"File"/选择"Import"，弹出对话框/对话框内，展开"General"项，选择"Existing Projects into Workspace"，点击"Next"/下一个对话框
+	    下一个对话框：选中"Select root directory"，选择工程所在路径，如"/home/xxx/catkin_ws/build"，下方的"Option"中，不要选中"Copy project into workspace"（原因未知），点击"Finish"
+
+	    工程目录结构：上述导入成功后，在Eclipse软件左侧的"工程目录结构"栏中，点击"Source directory"，里面就是工程的源代码
+
+
+	5.Eclipse使用，设置头文件路径，编译代码
+	    说明：默认情况下，Eclipse无法识别ROS的头文件（不详细，意思是src/project_x中的点c文件可以识别，但点h文件无法识别吗）
+
+	    步骤：Eclipse软件，菜单栏"Properties"，选择"C/C++ General"，弹出对话框/对话框左侧选中"Preprocessor Include Paths, Macros, etc"，在左侧的"Providers"栏中，选中"CDT GCC Build-in Complier Setting"项；
+
+	    编译代码：快捷键"Ctrl+B"
+
+
+
+
+	6.运行/调试程序
+	    1.设置ROS Master的URI环境变量
+	        说明：在运行可执行文件之前，需要设置ROS Master的URI环境变量；
+	        步骤：菜单栏"Run"，选择"Run Configuration"，弹出对话框/新对话框中，左侧展开"C/C++ Application"，选中左侧展开后的"talker configuration"；右侧选中"main"选项卡，在下方的"C/C++ Application"栏中选择刚才编译生成的可执行文件，如"/home/xxx/catkin_ws/devel/lib/learning communication/talker"
+		小疑问：意思是一个catkin_ws中有很多的project功能包，对应生成很多个可执行文件；这里意思是指定运行哪一个可执行文件吗
+
+	        步骤：上述对话框中，右侧选择"Environment"选项卡，在下方列表中设置"ROS_MASTER_URI"，"ROS_ROOT"变量；这两个变量的值可以在终端中使用如下命令查看，echo $ROS_ROOT，echo $ROS_MASTER_URI；通常取值举例，ROS_ROOT取值"/opt/ros/indigo/share/ros"，ROS_MASTER_URI取值"http://localhost:11311"
+
+	    2.运行程序：点击"Run"的按钮
+
+	    3.Eclipse的控制台窗口输出乱码问题（不详细）
+	        说明：运行程序时，在Eclipse软件下方的控制台窗口中会输出运行信息，但会出现乱码的前后缀；原因是，ROS的输出编码和Eclipse的输出编码不同；可以在Eclipse中安装"ANSI escape sequences"插件解决；
+
+	    4.调试程序（不详细）
+	        说明：在菜单栏"Debug Configuration"，选择"C/C++ Application"中设置；
+
+
+
+
+
+
+
+
+
+
+
+【18】.关于RoboWare开发环境
+	说明：Eclipse属于通用IDE环境，用于ROS时需要进行一些设置；RoboWare是专为ROS设计的开发环境，需要的设置很少；
+
+	1.RoboWare的安装（不详细）
+	    说明：官网下载deb安装包，http://roboware.com；
+	    安装命令：sudo dpkg -i roboware-studio-[version]-[architecture].deb
+
+
+
+
+
+
+
+
+
+
+【19】.创建Publisher
+	1.Publisher代码，talker.cpp文件
+#include<sstream>
+#include"ros/ros.h"
+#include"std_msgs/String.h"
+
+int main(int argc, char **argv)
+{
+    //ROS节点初始化
+    ros::init(argc, argv, "talker");
+
+    //创建节点句柄
+    ros::NodeHandler n;
+
+    //创建一个Publisher，发布名称为chatter的topic，消息类型std_msgs::String
+    ros::Publisher chatter_pub=n.advertise<std_msgs::String>("chatter",1000);
+
+    //设置循环的频率
+    ros::Rate loop_rate(10);
+
+
+    int count=0;
+    while(ros::ok())
+    {
+        //初始化std_msgs::String类型的消息
+        std_msgs::String msg;
+        std::stringstream ss;
+        ss<<"hello world"<<count;
+        msg.data=ss.str();
+
+        //发布消息
+        ROS_INFO("%s",msg.data.c_str());
+        chatter_pub.publish(msg);
+
+        //回调函数
+        ros::spinOnce();
+
+        //按循环频率延时
+        loop_rate.sleep();
+        ++count;
+    }
+    return 0;
+}
+
+
+	2.各部分注释
+	    1.头文件部分
+	        #include"ros/ros.h"
+	        #include"std_msgs/String.h"
+	        说明："ros/ros.h"中已经包含了大部分ROS中通用的头文件；因为用到std_msg::String类型，所以需要包含"std_msgs/String.h"；
+	        std_msgs::String msg;
+	        ROS_INFO("%s",msg.data.c_str());
+	        小疑问，具体ss_msgs::String数据类型的格式不清楚；包括msg.data.c_str()函数；
+
+
+	    2.头文件部分2
+	        #include<sstream>
+	        std::stringstream ss;
+	        ss<<"hello world"<<count;
+	        xxx=ss.str();
+	        说明：include的"sstream"部分，在后面的定义std::stringstream变量时用到；小疑问，具体ss变量的格式，比如ss.str()函数，不清楚；
+
+
+	    3.初始化部分
+	        ros::init(argc, argv, "talker");
+	        说明：前两个参数"argc"，"argv"可以在rosrun xxx时候输入，也可以通过launch文件调用该node时候输入；第三个参数"talker"是该node的名称，node名称需要唯一；
+	        小疑问：好像是每个cpp文件就只能一个node；或者每个main函数就是一个node；
+
+	    4.创建句柄
+	        ros::NodeHandle n;
+	        说明：创建句柄；一个node可以发布很多个topic，也可以订阅很多个topic，都是通过句柄n进行的；
+
+
+	    5.发布topic
+	        ros::Publisher chatter_pub=n.advertise<std_msgs::String>("chatter",1000);
+	        说明：向Master注册一个topic，把必要信息告诉Master；topic名是"chatter"，topic的数据类型是std_msgs::String；第三个参数是消息队列大小，当发布速度较慢时，待发布的消息会存放到消息队列中，消息数量超过队列大小时，会删除最早的消息；
+
+
+	    6.设置发布频率
+	        ros::Rate loop_rate(10);
+	        说明：单位是Hz，上面设置发布频率是10Hz；该函数实际与for()循环中的Rate::sleep()函数配合使用，此处loop_rate()函数设置了发布频率；在for()循环中每次循环末尾调用Rate:sleep()函数，如果距离上次调用Rate:sleep()间隔时间小于100ms，则Rate::sleep()函数会延时凑到100ms；如果间隔时间已经超过100ms，则不延时；即此处的定时发布消息，不是单片机中的中断定时器方式，而是延时函数形式；
+
+	    7.循环语句
+	        while(ros::ok())
+	        说明：如果节点没有异常消息，ros::ok()返回true，会运行该while()循环；如果有异常，则返回false，跳出循环；节点的异常消息包括如下
+	        1.键盘输入停止信息，Ctrl+C；
+	        2.被另一个同名的节点踢掉线；
+	        3.调用了关闭函数，ros::shutdown()；
+	        4.ros::NodeHandles，句柄被销毁；
+
+
+	    8.发布消息
+	        ROS_INFO("%s",msg.data.c_str());
+	        chatter_pub.publish(msg);
+	        说明：publish()函数发布消息，Master会查找订阅该消息的node，并完成消息的传输；ROS_INFO()函数类似printf()，把消息打印到IDE控制台；
+
+	    9.回调函数
+	        ros::spinOnce();
+	        说明：如果当前节点订阅了其他topic，每个topic的回调函数在该spinOnce()函数中执行；小疑问，就是节点的消息处理，同样不是类似单片机的串口中断方式，收到消息自动处理；而是一个大循环里，自行去扫描是否收到消息，然后调用对应函数处理；
+
+
+
+
+
+
+
+
+
+
+
+【20】.创建Subscriber
+	1.Subscriber代码，listener.cpp文件
+#include"ros/ros.h"
+#include"std_msgs/String.h"
+
+void chatterCallback(const std_msg::String::ConstPtr& msg)
+{
+    //收到消息后，打印到控制台
+    ROS_INFO("I heard: [%s]",msg->data.c_str());
+}
+
+int main(int argc, char **argv)
+{
+    //初始化ROS节点
+    ros::init(argc, argv, "listener");
+
+    //创建节点句柄
+    ros::NodeHandle n;
+
+    //创建一个subscriber，订阅名为chatter的topic，回调函数设置为chatterCallback()
+    ros::Subscriber sub=n.subscribe("chatter", 1000, chatterCallback);
+
+    //回调函数
+    ros::spin();
+
+    return 0;
+}
+
+	2.各部分注释
+	    1.回调函数
+	        void chatterCallback(const std_msg::String::ConstPtr& msg)
+	        说明：小疑问，回调函数中定义变量，msg原始的变量类型是std_msg::String，加const表示常引用？不能改变数值吗？加&表示不是新申请空间，而是直接使用原始变量的值，而ConstPtr部分未知
+	        小疑问：msg数据类型，在当前listener.cpp中没有定义；意思是在spin()函数所在的源文件中，从类似串口的地方接收数据后，赋值给回调函数chatterCallback()的msg变量中吗；
+
+
+	    2.订阅topic
+	        ros::Subscriber sub=n.subscribe("chatter", 1000, chatterCallback);
+	        说明：1000表示订阅消息的列队，如果来不及调用chatterCallback()函数处理，则暂存在消息列队，超过1000个则丢弃最早的消息；
+	        关于函数名对比：发布（publish）topic使用n.adverse()函数，变量类型是ros::Publisher；订阅（subscribe）topic使用n.subscribe()函数，变量类型是ros::Subscribe；函数名好像没有完全对应吗；
+
+
+	    3.回调函数
+	        ros::spin()
+	        说明：等效于如下函数；即还是一样，没有使用类似独立硬件的定时器中断方式处理，还是自己在一个大循环中去扫描是否有待处理消息，然后自行处理；
+		while(ros::ok())
+		{
+		    ros::spinOnce();
+		}
+
+
+
+
+
+
+
+
+
+
+【21】.功能包的编译，CMakeLists.txt
+	1.CMakeLists.txt举例
+include_directories(include $(catkin_INCLUDE_DIRS))
+
+add_executable(talker src/talker.cpp)
+target_link_libraries(talker $(catkin_LIBRARIES))
+add_dependencies(talker $(PROJECT_NAME)_generate_messages_cpp)
+
+add_executable(listener src/listener.cpp)
+target_link_libraries(listener $(catkin_LIBRARIES))
+add_dependencies(listener $(PROJECT_NAME)_generate_messages_cpp)
+
+
+	2.各部分注释
+	    1.include_directories(include $(catkin_INCLUDE_DIRS))
+	        说明：上述命令一般用于调用第三方库时，需要加入第三方库的cpp文件和h文件所在路径；
+	        说明（不确定）：上述语句中，catkin_INCLUDE_DIRS代表默认的头文件目录（如一般是"功能包目录/include"）+ROS默认安装目录+Linux系统路径；小疑问，意思是每个CMakeLists.txt文件都需要上述的语句，头文件不是放在功能包目录下吗，为何还需要include，如果是第三方库，不知道源文件和头文件路径，需要include还可以理解
+
+	    2.add_executable
+	        说明：每一个需要生成的可执行文件都需要使用add_executable()命令指定，如果可执行文件需要多个源文件编译生成，则后面依次列出，中间使用空格分隔；
+
+	    3.target_link_libraries(talker $(catkin_LIBRARIES))
+	        说明：如果某个可执行文件用到第三方库，需要将第三方库链接到该可执行文件；第一个参数"talker"是需要编译生成的可执行文件名；此处没有使用到第三方库，$(catkin_LIBRARIES)表示默认库；小疑问，意思是上述语句是必须的吗，如果用到了第三方库，则上述的默认库也需要添加吗
+
+	    4.add_dependencies(listener $(PROJECT_NAME)_generate_messages_cpp)
+	        作用1：如果自定义了msg类型，这些msg类型是与使用的编程语言无关的，在编译过程中，会生成与相应语言的代码（即动态生成的代码），所以需要"$(PROJECT_NAME)_generate_messages_cpp"变量，指代依赖于这些动态生成的代码；小疑问，上面不是只使用了std_msg::String类型吗，没有自定义msg类型，为何也需要上述语句声明
+	        作用2（不确定）：如果使用了第三方库，则依赖这些库，也需要用该函数指定；小疑问，不是在target_link_libraries()中给出了需要的第三方库信息，这里再指定，不是重复指定了
+
+
+	3.功能包的编译（重复）
+	    cd ~/catkin_ws
+	    source ./devel/setup.bash
+
+	4.运行（重复）
+
+
+
+
+
+
+
+
+
+
+
+【22】.自定义topic的消息类型
+	1.杂
+	    默认提供的数据类型：在ROS的元功能包（meta package）中，已经提供了许多常用的msg类型；如std_msgs（标准数据类型），geometry_msgs（几何学数据类型），sensor_msgs（传感器数据类型）等；
+	    自定义数据类型：ROS中提供一套与编程语言无关的数据类型定义方式，即编译时会根据实际使用的编程语言，生成对应的变量定义代码；msg文件放在功能包（package）根目录下的msg文件夹中；
+	    自定义topic与package：自定义的topic文件属于package中的一个部分，只是编译后生成特定语言的文件；所以一样在catkin工作空间下的某个package中定义；
+
+
+	2.工作空间，功能包（重复）
+	    1.新建工作空间
+	        mkdir -p ~/catkin_ws/src
+	        catkin_make
+	        echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
+
+	    2.新建功能包
+	        cd ~/catkin_ws/src
+	        catkin_create_pkg learning_commmunication std_msgs rospy roscpp
+	        小疑问：需要自定义topic消息类型的package，一般都依赖这三个package吗，std_msgs、rospy、roscpp；
+
+
+
+	3.msg文件
+	    说明：以下是"learning_communication/msg/Person.msg"文件的内容；
+
+	    msg文件内容：
+	        string name
+	        uint8 sex
+	        unit8 age
+	        unit8 unknown=0
+	        unit8 male=1
+	        uint8 female=2
+	        说明：上述使用的基础数据类型string，uint8是与语言无关的，在编译阶段会生成对应语言的数据类型；上述内容中，unit8 age等是变量，unit unknown=0等是常量，类似C语言的宏定义，可以直接替代使用；
+
+	    标准格式头信息，std_msgs/Header
+	        #Standard metadata for higher-level flow data types
+	        uint32 seq
+	        time stamp
+	        string frame_id
+	        说明：很多ROS消息定义中会包含一个标准格式的头信息，std_msgs/Header；如果使用了包含头信息的msg，在n.adverse()，n.subscribe()中使用时，会自动对std_msgs/Header变量的内容进行填写，不需要在代码中修改；自动填写的格式如下，seq是消息的顺序标识，publisher在发布消息时会自动累加；stamp是时间戳，会自动填写；frame_id是与数据相关的坐标系id，会自动填写（不确定？）
+
+
+
+	4.package.xml文件
+	    1.package.xml文件
+	        <build_depend>message_generation</build_depend>
+	        <run_depend>message_runtime</run_depend>
+	        说明：在package.xml文件中，需要添加message编译与运行有关的依赖；
+
+
+
+	5.CMakeLists.txt文件
+	    1.CMakeLists.txt文件，find_package()
+	        find_package(catkin REQUIRED COMPONENTS
+		geometry_msgs
+		roscpp
+		rospy
+		std_msgs
+		message_generation
+	        )
+	        说明：自定义msg的编译需要message_generation这个功能包？
+	        小疑问，geometry_msgs，roscpp等，意思是在代码中用到的官方库都需要加入吗，前面的CMakeLists.txt文本讲解中好像没有；并且到此为止，添加使用到的库的命令已经重复4个了吗，include_directories()，target_link_libraries()，add_dependencies()，find_package()；
+
+
+	    2.CMakeLists.txt文件，catkin_package()
+	        catkin_package(
+		...
+		CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs message_runtime
+		...
+	        )
+	        说明：自定义msg的运行需要message_runtime这个功能包（package）？
+	        小疑问（重复），geometry_msgs，roscpp等，意思是在代码中用到的官方库都需要加入吗，前面的CMakeLists.txt文本讲解中好像没有；并且到此为止，添加使用到的库的命令已经重复5个了吗，include_directories()，target_link_libraries()，add_dependencies()，find_package()，catkin_package()；
+
+
+	    3.CMakeLists.txt文件，add_message_files()
+	        add_message_files(
+		FILES
+		Person.msg
+	        )
+	        说明：指定需要编译哪个msg文件；
+
+
+	    4.CMakeLists.txt文件，generate_messages()
+	        generate_messages(
+		DEPENDENCIES
+		std_msgs
+	        )
+	        小疑问：也是一个添加使用到的库的命令吗？如果这样，那么添加使用到的库的命令已经重复6个了吗，include_directories()，target_link_libraries()，add_dependencies()，find_package()，catkin_package()，generate_messages()；
+
+
+
+	6.编译工作空间
+	    cd ~/catkin_ws
+	    catkin_make
+	    echo "~/catkin_ws/devel/setup.bash" >> ~/.bashrc
+
+
+	7.自定义msg的编译使用
+	    1.编译：就是正常编译catkin空间，对catkin空间中所有功能包（package）进行编译；即catkin_make；
+
+	    2.使用自定义msg，include
+	        #include"learning_communication/msg/Person.h"
+	        说明：好像是这样，不确定？
+
+	    3.使用自定义msg，定义变量与使用
+	        learning_communication::Person staff;
+	        staff.name
+	        staff.sex
+	        staff.age
+
+	    4.终端窗口查看自定义msg消息
+	        rosmsg show Person
+	        说明：在编译后，可以使用rosmsg show xxx命令，像查看系统自带msg消息一样，查看自定义的Person消息；
+
+
+
+
+
+
+
+
+
+
+
+【23】.自定义service类型
+	1.小乌龟例子中的service
+	    1.查看系统中的service
+	        命令：rosservice list
+	        返回：
+		/clear
+		/kill
+		/reset
+		/spawn
+		/turtle1/set_pen
+		/turtle1/teleport_absolute
+		/turtle1/teleport_relative
+		/turtlesim/get_loggers
+		/turtlesim/get_logger_level
+		/rosout/get_loggers
+		/rosout/get_logger_level
+
+	    2.调用服务举例
+	        rosservice call /spawn "x:8.0 y:8.0 theta:0.0 name:'turtle2'"
+	        说明：调用服务，增加一只小乌龟
+
+
+	2.自定义srv文件举例
+	    1.自定义srv文件，"learning_communication/srv/AddTwoInts.srv"
+	        int64 a
+	        int64 b
+	        ---
+	        int64 sum
+	        说明：与自定义msg一样，可以自定义与编程语言无关的srv数据类型；存放为止，功能包（package）根目录下的srv文件夹中；srv文件中，请求部分与应答部分之间，使用"---"进行分隔；
+
+	    2.package文件修改
+	        < build_depend>message_generation</build_depend>
+	        <run_depend>message_runtime</run_depend>
+	        说明：与自定义msg时相同；
+
+	    3.CMakeLists.txt文件，find_package()
+	        find_package(catkin REQUIRED COMPONENTS
+		geometry_msgs
+		roscpp
+		rospy
+		std_msgs
+		message_generation
+	        )
+	        说明：与自定义msg时相同；
+
+	    4.CMakeLists.txt文件，add_service_files(
+		FILES
+		AddTwoInts.srv
+	        )
+	        说明：指定要对哪个srv文件生成新数据类型；自定义msg类型时，使用的是add_message_files()函数；
+	        小疑问：自定义msg类型时，还有generate_messages()函数，此处没有吗
+
+
+
+	3.自定义srv类型的使用
+	    头文件包括：#include"learnning_communication/AddTwoInts.h"
+
+	    定义变量与使用（方式1）：
+	        learnning_communication:: AddTwoInts:: Request req;
+	        learnning_communication:: AddTwoInts:: Response res;
+	        req.a=xxx
+	        req.b=xxx
+	        res.sum=xxx
+
+	    定义变量与使用（方式2）：
+	        learnning_communication:: AddTwoInts srv;
+	        srv.request.a=xxx
+	        srv.request.b=xxx
+	        srv.respond.sum=xxx
+
+
+
+
+
+
+
+
+
+【24】.创建Server
+	1.learning_communication/src/server.cpp代码
+	    说明：service的功能定义为，Client提供2个数，Server相加后返回和；
+
+#include"ros/ros.h"
+#include"learnning_communication/AddTwoInts.h"
+
+//service回调函数，输入参数req，输出参数res
+bool add(learning_communication:: AddTwoInts:: Request &req
+learning_communication:: AddTwoInts:: Response &res
+)
+{
+    //将输入参数中的请求数据相加，结果放到应答变量中
+    res.sum=req.a+req.b;
+    ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
+    ROS_INFO("sending back responce: %ld", (long int) &res.sum);
+
+    return true;
+}
+
+int main(int argc, char **argv)
+{
+    //ROS节点初始化
+    ros::init(argc, argv, "add_two_ints_server");
+
+    //创建节点句柄
+    ros::NodeHandle n;
+
+    //创建一个名为add_two_ints的server，并设置回调函数为add()
+    ros::ServiceServer service=n.advertiseService("add_two_ints", add);
+
+    //循环等待回调函数
+    ROS_INFO("Ready to add two ints");
+    ros::spin();
+
+    return 0;
+}
+
+
+	2.各部分说明
+	    1.注册server
+	        ros::ServiceServer service=n.advertiseService("add_two_ints", add);
+	        说明：对比函数；发布topic使用n.adverse()函数，变量类型，ros::Publish；订阅topic使用n.subscribe()函数，变量类型，ros::Subscribe；注册server使用n.advertiseService()函数，变量类型，ros::ServiceServer；
+
+	    2.等待回调函数
+	        ros::spin();
+	        说明：与订阅发布topic相同；ros::spin()等效于如下；使用一个while()循环去不停扫有没有消息，而不是中断函数形式；
+		while(ros::ok())
+		{
+		    ros::spinOnce();
+		}
+
+	    3.回调函数中，add()
+	        小疑问：同样，在当前server.cpp文件中没有定义srv类型变量，只在client.cpp文件中定义；且在n.adverseService()函数中没有给定回调函数的输入参数；所以也是类似跨文件使用变量吗？
+
+
+
+
+
+
+
+
+
+
+【25】.创建Client
+	1.learning_communication/src/client.cpp文件如下
+#include<cstdlib>
+#include"ros/ros.h"
+#include"learning_communication/AddTwoInts.h"
+
+int main(int argc, char **argv)
+{
+    //ROS节点初始化
+    ros::init(argc, argv, "add_two_ints_client");
+
+    //如果输入参数错误，则返回
+    if(argc!=3)
+    {
+        ROS_INFO("usage: add_two_ints_client X Y");
+        return 1;
+    }
+
+    //创建节点句柄
+    ros:: NodeHandle n;
+
+    //创建一个client
+    ros:: ServiceClient client=n.ServiceClient<learning_communication::AddTwoInts>("add_two_ints");
+
+    //新建变量，赋值
+    learning_communication::AddTwoInts srv;
+    srv.request.a=atoll(argv[1]);
+    srv.request.b=atoll(argv[2]);
+
+    //发布Service请求，等待返回结果
+    if(client.call(srv))
+    {
+        ROS_INFO("Sum: %ld", (long int)srv.response.sum);
+    }
+    else
+    {
+        ROS_INFO("Failed to call service add_two_ints");
+    }
+
+    return 0;
+}
+
+
+	2.各部分说明
+	    1.头文件包括
+	        #include<cstdlib>
+	        小疑问，作用未知，是atoll()函数吗
+
+	    2.输入参数有关1
+	        if(argc!=3)
+	        {
+	            ROS_INFO("usage: add_two_ints_client X Y");
+	            return 1;
+	        }
+	        说明：int main(int argc, char **argv)中，输入参数是在终端命令行调用可执行文件时输入的；（不确定）argc是从1开始计数，以空格为分界线，空格之间每个输入量都当作一个参数，包括可执行文件名（如"add_two_ints_client 1 2"，判断为3个输入参数）；
+
+	    3.输入参数有关2
+	        learning_communication::AddTwoInts srv;
+	        srv.request.a=atoll(argv[1]);
+	        srv.request.b=atoll(argv[2]);
+	        说明（不确定）：argv[1]，argv[2]，说明argv[]数组是从0开始计数的,，与C语言数组规则一致；（例如，终端输入"add_two_ints_client 1 2"，则argc是3，而argv[0]="add_two_client"，argv[1]="1"，argv[2]="2"）
+	        函数atoll()：作用是把字符串转换成长长整数型（long long，64位）
+
+
+	    4.创建一个Client
+	        ros:: ServiceClient client=n.ServiceClient<learning_communication::AddTwoInts>("add_two_ints");
+	        函数对比：发布topic使用n.adverse()函数，变量类型，ros::Publish；订阅topic使用n.subscribe()函数，变量类型，ros::Subscribe；注册server使用n.advertiseService()函数，变量类型，ros::ServiceServer；注册Client使用n.ServiceClient()函数，变量类型，ros::ServiceClient；
+
+
+
+	    5.发布Service请求，等待返回结果
+	        if(client.call(srv))
+	        {
+	            ROS_INFO("Sum: %ld", (long int)srv.response.sum);
+	        }
+	        说明：调用client.call()函数，会阻塞，调用成功则返回true；否则返回false；小疑问，是否等效于如下（伪代码）
+		client.call()
+		{
+		    call_function();
+		    while(1)
+		    {
+		        if(time_count(10ms))
+			return false;
+		        if(call_respond())
+			return true;
+		    }
+		}
+
+
+
+
+
+
+
+
+
+
+【26】.Service的编译运行
+	1.Client，Server的编译，CMakeLists.txt文件
+	    1.本次server.cpp，client.cpp代码编译使用的CMakeLists.txt
+	        add_executable(server src/server.cpp)
+	        target_link_libraries(server $(catkin_LIBRARIES))
+	        add_dependencies(server $(PROJECT_NAME)_gencpp)
+
+	         add_executable(client src/client.cpp)
+	         target_link_libraries(client $(catkin_LIBRARIES))
+	         add_dependencies(client $(PROJECT_NAME)_gencpp)
+
+	    2.对比，publisher.cpp，subscriber.cpp的编译使用的CMakeLists.txt
+	        include_directories(include $(catkin_INCLUDE_DIRS))
+
+	        add_executable(talker src/talker.cpp)
+	        target_link_libraries(talker $(catkin_LIBRARIES))
+	        add_dependencies(talker $(PROJECT_NAME)_generate_messages_cpp)
+
+	        add_executable(listener src/listener.cpp)
+	        target_link_libraries(listener $(catkin_LIBRARIES))
+	        add_dependencies(listener $(PROJECT_NAME)_generate_messages_cpp)
+	        说明：再加上之前自定义srv所需的语句；
+
+	    3.说明：小疑问，本次的CMakeLists.txt中，没有include_directories()函数？本次的CMakeLists.txt中，add_dependencies()函数中的内容不同？
+
+
+	2.可执行文件，运行
+	    新的终端：roscore
+	    新的终端：rosrun learning_communication server
+	    新的终端：rosrun learning_communication client 3 5
+
+
+
+
+
+
+
+
+
+
+
+【27】.ROS的命令空间（没看懂，仅记录）
+	1.说明：ROS中的各个元素称为"计算图源"，比如属于通信类型中的topic，parameter server，service；比如各个节点（node）；ROS的命名空间指代怎么给这些内容取名的规则（小疑问，前面取名时都是用简单的单词，没有用到多级结构，好像是不仅仅可以取名"add_two_ints"这样的service名，还可以取/xx/xx/xx这样的多级名）
+
+	2.命名可用元素
+	    1.首字符：字母（a-z，A-Z），波浪线（~），左斜杠（/）
+	    2.后续字符：字符，数字（a-z，A-Z，0-9），下划线（_），左斜杠（/）
+
+
+	3.可用的取名类型，基础名称，全局名称
+	    说明：可用的取名类型包括，基础名称（base name），全局名称（global name），相对名称（relative name），私有名称（private name）
+
+	    1.基础名称（base name）：例如add_two_ints
+	        说明：前面使用的所有ROS中元素命名都采用这个方式，没有涉及到命名空间；
+
+	    2.全局名称（global name）：例如/xxx1/xxx2/add_two_ints
+	        说明：要求，以左斜杠（/）开头；特点（不确定），解析度最高，可以在全局范围内直接访问；但尽量少用，因为过多的全局名称会影响功能包的可移植性；
+
+
+	4.可用的取名类型，相对名称
+	    1.相对名称（relative name）：如xxx/add_two_ints
+	        说明（不确定）：有时候全局名称长度会非常长，前缀有n级；此处可以用一个相对名称xxx代表全局名称中任意长度级（如m级）；后续继续逐级书写展开；举例，全局名称是"a/b/c/d/e/f/g/add_two_ints"；设置相对名称"relative_path=/a/b/c/d/e/f"；则上述全局名称可以表示为，"relative_path/g/add_two_ints"
+	        小疑问：相对名称设定后，是指在某个.cpp文件中统一吗；不同.cpp文件中可以指定为不同的相对名称吗
+	        说明（不确定）：移植性，相对名称具有良好的移植性，用户可以将一个相对名称的节点移植到其他命名空间中，有效防止命名冲突；
+
+
+	    2.相对名称的给定：相对名称由ROS程序中默认给定，给定方式有多种，分别列举如下
+	        1.ros::init()中设定：在ros::init()函数中，可以指定"__ns"变量的值，即相对名称的值；举例，__ns=::/a/b/c/d/e/f
+
+	        2.在launch文件中指定：在启动某个node时，可以设定"ns"参数；举例，<node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node" ns="sim1"/>
+		小疑问：是否也可以通过终端命令行设定，如rosrun xxx xxx ns:=xxx
+
+	        3.使用环境变量设置：在终端窗口中设定，export ROS_NAMESPACE=/a/b/c/d/e/f
+		小疑问：这样设定后，是指所有.cpp文件中都统一使用同一个相对位置吗
+
+
+	5.可用的取名类型，私有名称
+	    1.私有名称（private name）：如~add_two_ints
+	        说明：私有名称格式是都以波浪线（~）开头；私有名称的~专门指代所在节点（node）的全局名称；如所在节点的全局名称是"/a/b/c/d/e/f/"，私有名称举例为"~g/h/i/add_two_ints"；则实际的全局名称为"/a/b/c/d/e/f/g/h/i/add_two_ints"；私有名称类似与相对名称，但私有名称的前缀所指代路径是固定的，不能人为设定；
+
+
+	6.命名重映射（不确定）
+	    1.说明：ROS中每种资源都有自己的名字，但这个名字可以在节点启动时候进行重映射（即使重新取名）；其中一个作用是，如果要同时运行打开两个相同的节点，可以用这种方法；
+
+	    2.重映射语法：name:=new_name
+
+	    3.重映射命令举例
+	        rosrun rospy_tutorials talker chatter:=/wg/chatter
+	        说明（不确定）：估计应该有多种名称重映射的方式，这里是终端启动节点时候，进行重映射；那么是否launch文件启动也可以；
+
+	    4.没看懂部分：
+节点命名空间	重映射参数	匹配名称		解析名称
+/		foo:=bar		foo, /foo		/bar
+/baz		foo:=bar		foo, /baz/foo	/baz/bar
+/		/foo:=bar	foo, /foo		/bar
+/baz		/foo:=bar	/foo		/baz/bar
+/baz		/foo:=/a/b/c/bar	/foo		/a/b/c/bar
+	        说明：ROS的命名解析是在命名重映射之前进行的；所以如果使用"foo:=bar"，会将节点内所有的foo重映射为bar；如果使用"/foo:=bar"，只会将全局解析为/foo的名称重映射为bar；
+
+
+
+
+
+
+
+
+
+
+
+【28】.多机通信
+	说明：ROS是一种分布式软件架构，节点之间是松耦合，可以运行在不同的机器上，使用topic，service进行通信；底层是通过ssh通信；Master有关，ROS系统中只能有一个Master，运行在某一台机器上；
+
+
+	1.网络物理连接
+	    说明：首先要求多机系统的设备都在同一个网络中；如果使用虚拟机，则网络方式选择"桥接模式"；如果选择NAT模式，则虚拟机可以ping其他机器，其他机器无法ping虚拟机；
+
+
+
+	2.查询IP、hostname
+	    1.查看每台机器的自身IP地址
+	        命令：ifconfig
+	        返回内容：返回内容中，"HWaddr: xxxx"部分是硬件地址；"inet addr: 192.168.31.198  BCast: 192.168.31.255  Mask: 255.255.255.0"是IPv4地址；其中"inet addr: 192.168.31.198"部分就是查到的需要的IP地址；"inet6 addr: xxxx"部分是IPv6地址；
+	        辨别不同ip地址所属：如查询到两个ip，则根据物理连接方式判断，如计算机1使用有线连接，则在eth0栏；计算机2使用无线连接，则在whan0栏；
+	        查询结果举例：设共有2台设备，名称和地址分别是hcx-pc（ip地址是192.168.31.198），raspi2（ip地址是192.168.31.14）；
+
+
+	    2.查看每台机器hostname
+	        说明：命令行终端前面xxx@yyy，yyy就是hostname；举例，某计算机的hostname是"hcx-pc"，ip地址是"192.168.31.198"；
+
+
+
+	3.设置hosts文件
+	    1.设置方式
+	        方法1：gedit修改
+	            sudo gedit /etc/hosts
+
+	        方法2：vim修改
+	            sudo chmod a+w /etc/hosts	//添加权限
+	            sudo apt-get install vim	//安装vim
+	            vim /etc/hosts		//修改文件
+
+
+	    2.修改内容
+	        说明：分别在两台设备的/etc/hosts文件中加入对方的IP地址和计算机名
+	        在hcx-pc的"/etc/hosts"文件中加入：
+	        192.168.31.14 rapsi2
+
+	        在raspi2的"/etc/hosts"文件中加入：
+	        192.168.31.198 hcx-pc
+
+	        说明：ip地址与hostname之间好像是使用tab隔开，小疑问，使用空格隔开可以吗；（不确定）一般好像是只要在/etc/hosts文件中加入对方的ip和hostname即可，但好像保险期间也加入自己的ip和hostname；
+
+
+	    3.重启网络
+	        sudo /etc/init.d/networking restart
+	        说明：（不确定）
+
+
+	    4.测试网络连接，在两台计算机上分别ping对方
+	        在hcx-pc计算机上：ping raspi2
+	        在raspi2计算机上：ping hcx-pc
+	        说明：上述设置IP地址后，作用是可以用计算机名直接指代对方的IP地址，否则每个使用到IP地址的地方，需要输入具体的IP地址；
+
+
+
+	4.安装ssh
+	    说明：在两个计算机上都启动多个node，需要分别在两个计算机的终端上输入命令；如果使用ssh可以登录另外一台计算机上，则可以只在一台计算机上操作即可；ros的分布式架构与ssh无关，此处仅仅是为了方便在一台计算机上输入命令；
+
+	    1.安装步骤
+	        sudo apt-get install chrony
+	        sudo apt-get install openssh-server
+	        说明：（不详细）安装chrony包，用于实现同步；两台计算机上都需要安装；
+
+
+	    2.查看ssh是否启动
+	        ps -e | grep ssh
+	        说明：如果显示只有ssh-agent，则ssh-server未启动，执行sudo /etc/init.d/ssh start；如果显示ssh-agent,sshd，则ssh-agent,ssh-server都启动；
+
+	    3.测试ssh登录
+	        1.电脑ping机器人
+		ping robot_hostname
+		ssh computer_hostname
+
+	        2.机器人ping电脑（笔记本输入）
+		ping computer_hostname
+		ssh robot_hostname
+	        说明：上述假设两台计算机分别是，"机器人"、"电脑"；上述"robot_hostname"、"computer_hostname"可以使用具体的ip地址替代；后续的各类命令，可以在具体计算机的终端上输入，也可以使用ssh登录，在当前计算机上输入；
+
+	    4.可能问题
+	        说明：可能问题，主机名不能被其他机器解析；解决方式，在ssh登录时候，使用ssh hostname@local_ip格式；举例，原本是ssh rapsi2，修改为ssh rapsi2@192.168.31.14；
+
+
+
+	5.设置ROS_MASTER_URI
+	    1.说明：主机中运行Master，从机需要知道Master在哪个计算机上，即需要设置ROS_MASTER_URI变量（主机不需要设置）
+
+	    2.设置命令：export ROS_MASTER_URI=http://hcx-pc:11311
+	        说明：上述设置后，只在当前的终端窗口中有效，如果需要每个终端窗口中都有效，最好加入.bashrc文件中；可以使用命令，echo "export ROS_MASTER_URI=http://hcx-pc:11311" >> ~.bashrc
+	        说明：上述hcv-pc，指代运行master的计算机的hostname；小疑问，一般只需要在从机上设置ROS_MASTER_URI，让从机知道master在哪台电脑上运行，但保险起见，好像在运行master的电脑上也设置该变量；
+
+	    3.可能问题
+	        说明：如果遇到问题，可以用运行master主机的ip地址代替主机名；举例，原本是"export ROS_MASTER_URI=http://hal:11311"，修改为"export ROS_MASTER_URI=192.168.1.100:11311"；
+
+
+
+	6.等效操作（不确定）
+	    1.说明：上述设置/etc/hosts文件、设置.bashrc文件的步骤可以等效为如下，全部在.bashrc文件中设置；即原本在/etc/hosts文件中设置hostname，在bashrc文件中设置ROS_MASTER_URI，现在全部转为在bashrc文件中设置；如果使用上述两种方式设置，会报错，"too many values to unpack"；（不确定）信息源不确定，好像是这样；
+
+	    2.背景：
+	        机器人ip：192.168.1.1，robot_hostname，运行master
+	        电脑ip：192.168.1.2，computer_hostname
+
+	    3.修改bashrc文件
+	        说明：打开.bashrc：sudo gedit ~/.bashrc
+
+	        //机器人的bashrc文件中添加
+	        export ROS_HOSTNAME=robot_hostname
+	        export ROS_MASTER_URI=192.168.1.1:11311
+	        export ROS_IP=192.168.1.1
+
+	        //电脑的bashrc文件中添加
+	        export ROS_HOSTNAME=computer_hostname
+	        export ROS_MASTER_URI=192.168.1.1:11311
+	        export ROS_IP=192.168.1.2
+
+
+
+	7.多机通信测试，小乌龟实验
+	    说明：在上述步骤都设置好之后，可以测试在多个计算机上测试小乌龟实验；
+	    在hcx-pc计算机上：
+	        新建一个终端：roscore
+	        新建一个终端：rosrun turtlesim turtlesim_node
+
+	    在raspi2计算机上：
+	        新建一个终端：rosrun turtlesim turtle_teleop_key
+	        或者直接发送移动的topic：rostopic pub -r 10 /turtle1/cmd_vel geometry_msgs/Twist "linear: x:0.5 y:0.0 z:0.0 angular: x:0.0 y:0.0 z:0.5"
+	        可以在从机上查看ROS系统的所有topic，验证连接：rostopic list
+
+
+
+	8.运行问题
+	    说明：运行roscore，报错，"too many values to unpack"；处理方式，打开bashrc文件，注释掉以下三行；小疑问，是两种方式都设置了的问题吗，即/etc/host文件和bashrc文件中都设置了；
+	        export ROS_IP=`hostname -I`
+	        export ROS_HOSTNAME=`hostname -I`
+	        export ROS_MASTER)URI=http://xxx
+
+
+
+
+
+
+
+
+
+
+
+//ROS中的常用组件
+
+
+【29】.launch启动文件
+	1.杂
+	    说明：使用launch启动文件可以一次性启动多个节点（node），否则需要每个节点新开一个终端，使用rosrun启动；launch启动文件的格式为XML；执行roslaunch时，ROS会自动检测master是否启动，否则先roscore；
+	    网站："http://wiki.ros.org/roslaunch/XML"，有关launch文件的官方说明信息；
+
+
+	1.基本元素
+	    1.简单的launch文件举例
+<launch>
+    <node pkg="turtlesim" name="sim1" type="turtlesim_node"/>
+    <node pkg="turtlesim" name="sim2" type="turtlesim_node"/>
+</launch>
+
+	    2.各部分注释，<launch>，</launch>
+	        说明：<launch>称为根元素，启动文件中所有命令的内容都需要放在两个根元素之间；即<launch>开头，</launch>结尾；启动文件对每行命令的缩进没有要求，仅为了便于查看，可以合理缩进；
+
+	    3.各部分注释，<node.../>
+	        格式：<node pkg="package-name" type="executable-name" name="node-name"/>
+	        说明：上述命令用于启动一个节点（node），等效于终端的"rosrun package-name executable-name"命令；其中"pkg"指定节点所在的功能包名称，"type"指定节点可执行文件的名称（等同于rosrun后输入的两个参数）；"name"用来定义节点运行的名称，将覆盖节点中init()赋予的节点名称；三个参数的顺序没有要求，可以任意；
+
+	    4.<node>命令中，其他可用参数举例（不详细）
+	        output="screen"：将节点的标准输出打印到终端屏幕，默认输出为日志文档；（小疑问，是ROS_INFO之类的消息打印到屏幕吗，好像本来默认就打印到屏幕，然后再同时输出到/rosout这个topic上吗）
+
+	        respawn="true"：复位属性；如果该节点停止，会自动重启该节点；默认值为"false"；
+
+	        required="true"：必要节点；当该节点终止时，launch文件中的其他节点也会被终止；
+	        ns="namespace"：命名空间有关（前面有简要描述）；设定当前这个节点中的相对名称；
+	        args="arguments"：输入节点所需的参数，等效于rosrun命令中输入的参数；例如，rosrun learning_communication add_two_ints 3 5；
+
+	    5.<node>标签补充
+	        格式举例：
+<node name=""..>
+    <param name="xx" value="xx"/>
+</node>
+	        说明：即<node>标签除了<node xxx/>的形式，还可以使用<node xxx>...</node>形式；小疑问，中间使用参数服务器加载命令，为何放在<node>标签中间，与放在外面的区别是怎样吗；
+
+
+
+	2.<param>参数
+	    说明：param命令用于设定参数服务器（parameter server）中的参数值；（不详细）编程中，每个节点可以使用"ros::param::get()"函数去获得每个参数的值；在终端窗口中，可以使用"rosparam"命令去查看每个参数的值；
+
+	    1.格式举例：<param name="output_frame" value="odom"/>
+	        说明：上述命令将"output_frame"这个parameter的值设定为"odom"，并加载到ROS的参数服务器上。
+	        说明：格式举例，<param name=.. type="double" value="0.0"/>；即还可以通过type变量指定参数的数据类型，强制类型转换吗；
+
+
+	    2.格式举例：<rosparam file="$(find 2dnav_pr2)/config/costmap_params.yaml" command="load" ns="local_costmap" />
+	        说明（不详细）：上面使用param方式每次只能加载一个参数，使用rosparam方式可以一次性加载yaml文件中的所有参数；command参数需要设置为"load"；（小疑问，ns参数设置成"local_costmap"，意思是每个参数的实际全局地址是"/local_costmap/xxx"吗）
+	        小疑问：yaml文件中变量的格式是自定义的吗；
+
+
+
+	3.<arg>参数
+	    说明：arg参数是仅用于launch文件内部的局部变量，便于launch文件重构，与ROS节点内部的实现没有关系；
+
+	    定义arg参数格式1：<arg name="arg-name" default="arg-value"/>
+
+	    使用arg变量举例1：
+	        <param name="foo" value="$(arg arg-name)"\>
+	        <node name="node" pkg="package" type="type" args="$(arg arg-name)"\>
+	        说明：调用arg变量的地方需要使用"$(arg arg-name)"的格式；
+
+	    定义arg参数格式2（不详细）
+	        <arg name="world_name" value="$(find mrobot_gazebo)/worlds/playground.world"/>
+	        说明：不详细，仅仅举使用的上述例子；即使用<arg name="xx" value="xx"/>的形式；
+
+
+
+	4.重映射机制
+	    说明：使用ROS社区中下载的第三方功能包时，别人的功能包定义的topic名可能与自己需要的不同，可以通过重映射方式解决；例如，某功能包发送的速度控制指令是"/turtlebot/cmd_vel"，但自己程序中需要订阅的速度指令topic是"/cmd_vel"，则重映射命令如下（在launch文件中使用）
+
+	    指令：<remap from="/turtlebot/cmd_vel" to="/cmd_vel"/>
+	        小疑问：重映射之后，原先的topic还存在吗；两外，上面的从映射好像是"/cmd_vel"映射为"/turtlebot/cmd_vel"
+
+	    其他重映射指令：重映射类似命名空间（namespace）的重映射；（重复）在终端窗口中，输入指令可以用如下重映射方式，rosrun xxx xxx node:=xxx；
+
+
+
+	5.嵌套使用1，通常
+	    说明：可以使用include命令，把另一个launch文件中所有内容包含到当前的launch文件中；
+	    举例：<include file="$(dirname)/other.launch" />
+
+
+	5.嵌套使用2，特殊
+	    说明：没看懂，下面是具体例子；
+    <arg name="world_name" value="$(find mrobot_gazebo)/worlds/playground.world"/>
+    <arg name="debug" default="false"/>
+    <arg name="gui" default="true"/>
+    <arg name="paused" default="false"/>
+    <arg name="use_sim_time" default="true"/>
+    <arg name="headless" default="false"/>
+
+    <!-- gazebo仿真环境 -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(arg world_name)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="paused" value="$(arg pausd)"/>
+        <arg name="use_sim_time" value="$(use_sim_time)"/>
+        <arg name="headless" value="$(headless)"/>
+    </include>
+	    说明：<arg>标签用于launch文件内部的局部变量定义，且默认形式是<arg name="xx" default="xx"/>；上面先在外部定义arg变量；然后又在<include>文件时，定义<arg>，小疑问，是类似<node>标签中的args变量吗；
+
+
+
+	6.杂（不确定）
+	    1.包含关系：实际launch文件中，<node...>命令中会包含<remap>，<param>等命令；小疑问，为何要包含，放在外面效果有区别吗
+
+	    2.关于<node...>：通常的节点启动命令是<node xxx />，即括号内，node开头，左斜杠结束；如果节点启动命令中包含其他命令，则格式会编程如下：
+	        <node xxx>
+	        其他命令，如<remap xxx/> ，<param xxx />
+	        </node>
+
+	    3.关于其他没有讲到的命令举例
+	        <param name=xxx command=xxx />
+
+
+
+
+
+
+
+
+
+
+
+
+【30】.TF坐标变换，常用工具
+	1.关于TF功能包
+	    说明：TF是一个功能包（package），数学上是坐标系的三维变换，变换矩阵（旋转矩阵，平移变量）；功能包中的逻辑是，有些具体独立位姿的节点（node）会发布有关自己位姿的topic；然后专门的tf转发节点，去订阅这些topic，转成tf消息发布出去，然后取一个frame名；然后程序中任何需要知道两个坐标系之间变换矩阵的地方，取订阅对应的两个frame的tf消息，调用lookupTransform()函数就能计算得到；之所以不直接使用每个原始节点（node）发布的topic消息来计算不同坐标系之间的变换信息，是因为topic的格式不固定，都转发成tf消息，则可以使用统一的位姿变量格式，方便loopupTransform()函数计算；或者一开始就让那些需要发布自身位姿的node，使用tf消息来发布自身姿态，而不是乱七八糟的自定义的topic来发布自身姿态；
+	    关于发送的tf消息：发送tf消息的函数为，sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "frame_name"))；其中transform是存放姿态信息的变量；ros::Time::now()表示发送的当前时刻的变换信息（不详细）；"world"是一开始是固定有的frame，表示世界坐标系；"frame_name"表示需要给frame取一个名，即发送的是"frame_name"相对于"world"的位姿；（小疑问，是否意味着，可以发送当前"frame_name"相对于任意一个frame的位姿，在tf功能包中会转换成统一的相对于世界系"world"的变换信息；并且使用lookupTransform("/frame1", "/frame2", ros::Time(0), transform)函数可以得到任意两个frame，"/frame1"到"/frame2"之间的变换信息）
+
+	    关于TF工具：同时tf功能包还提供了许多终端窗口的工具；
+
+	    常见坐标系：世界坐标系（world frame），基坐标系（base frame），机械爪坐标系（gripper frame），机器人头部坐标系（head frame）
+
+
+
+	2.TF工具，tf_monitor
+	    1.tf_monitor
+	        说明：tf_monitor是查看现在系统中有哪些frame；
+	        返回结果举例：
+Frames:
+Frame base_footprint published by unknown_publisher Average Delay: 0.00932377 Max Delay: 0.01
+...
+
+All Broadcasters:
+Node: unknown_publisher 367.647Hz, Average Delay: 0.00444 Max Delay: 0.01
+...
+	        说明：第一部分"Frames"列举当前所有的frame，即每个有需要发布独立位置的节点（node），包含发布者，延时信息；第二部分"All Broadcaseters"，是发布者的信息；
+	        小疑问：有发布者，意思可能是同一个frame可能有多个"tf::TransformBroadcaster"类型的发布变量在发布吗，类似同个topic上可能有多个publisher在发布消息；
+
+
+	    2.tf_monitor <source_frame> <target_frame>
+	        举例：tf_monitor base_footprint odom
+	        返回结果举例：
+RESULTS: for base_footprint to odom
+Chain is:
+Net delay ave=0.00770658 max=0.02
+
+Frames:
+
+All Broadcasters:
+Node: unknown_publisher 368.8Hz Average Delay: 0.00483731 Max Delay: 0.01
+
+	        说明：此处已经指明两个frame信息，所以不是为了查看系统中有哪些frame，而是查看两个frame的延时信息；小疑问，第一部分，"Chain"，每个Frame的延时可以理解，两个Frame之间的变换矩阵是使用lookupTransform()函数计算得到的，则Chain的延时指代什么吗；第二部分，为何不显示涉及到的两个Frame的延时信息；
+
+
+
+	3.TF工具，tf_echo
+	    命令格式：tf_echo <source_frame> <target_frame>
+	    举例：rosrun tf tf_echo /map /base_link
+	        小疑问：是否需要rosrun tf这个部分，tf本身是一个功能包（package），所以可以使用rosrun格式；但是否也可以直接使用tf_echo命令的形式吗
+
+	    说明：该命令用于显示两个frame之间的变换信息；平移信息显示平移矩阵，旋转信息显示四元数形式、RPY欧拉角（角度单位）、RPY欧拉角形式（弧度单位）；结果中包含当前时刻的变换信息，和各个历史时刻的变换信息（采用At time xxx形式来列举不同时刻的变换信息）；
+
+
+
+	4.TF工具，static_transform_publisher（没看懂）
+	    说明：作用是发布两个坐标系之间的静态变换关系；小疑问，不是应该每个frame发布自己的坐标，然后如果需要知道任意两个frame之间变换关系的时候，使用loopupTransform()函数吗；此处直接发布两个frame之间的变换关系，而且要求这两个frame之间的相对位姿是固定的；而且还固定频率发送（如果都固定了，直接写在参数服务器不就行吗）
+
+	    使用终端窗口形式：
+	        static_transform_publisher x y z yaw pitch roll frame_id child_frame_id period_in_ms
+	        static_transform_publisher x y z qx qy qz qw frame_id child_frame_id period_in_ms
+	        说明：两个frame之间的平移信息使用x y z形式；第一个形式的命令中，两个frames之间的旋转使用YPR的欧拉角形式；第二个形式的命令中，两个frames之间使用四元数形式；发布频率以ms为单位；
+
+	    launch文件中形式：
+	        <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="1 0 0 0 0 0 1 link1_parent link1 100" />
+	        说明：意思是这tf功能包中的一个节点，可以调用使用；
+
+
+
+	5.TF工具，view_frames
+	    说明：用于可视化查看当前系统中所有frame（称为整颗tf树）的工具，可以生成pdf文件；
+
+	    生成pdf文件：rosrun tf view_frames
+	    查看pdf文件：evince frames.pdf
+	        说明：或在GUI界面中，使用任意pdf阅读器打开；
+
+	    小疑问：在生成的pdf中，"Broadcaster"等信息都是放在两个frame的连接线上；不是应该是每个frame发布自己的位置吗；
+
+
+
+
+
+
+
+
+
+
+
+
+【31】.TF坐标变换，小乌龟例子
+	1.小乌龟例子
+	    1.安装turtle_tf例子：
+	        sudo apt-get install ros-kinetic-turtle-tf
+
+	    2.运行turtle_tf例子：
+	        roslaunch turtle_tf turtle_tf_demo.launch
+	        说明：打开后，仿真器中会出现两只小乌龟，下方的小乌龟会自动向中心位置的小乌龟移动；
+
+	        rosrun turtlesim turtle_teleop_key
+	        说明：可以用键盘控制中间位置的小乌龟移动；然后另一只小乌龟会自动跟随；
+
+	        rosrun tf view_frames
+	        说明：查看当前系统中所有的frame；共有3个frame，分别是world，turtle1，turtle2；
+
+	        rosrun tf tf_echo turtle1 turtle2
+	        说明：查看两个frame之间的变换信息；平移信息使用平移向量表示，旋转信息使用四元数、RPY形式的欧拉角（角度形式）、RPY形式的欧拉角（弧度形式）分别表示；
+
+	        rosrun rviz rviz -d `rospack find turtle_tf`/rviz/turtle_rviz.rviz
+	        说明：可以使用rviz可视化（不详细）
+
+
+
+	2.小乌龟例子，各个节点作用
+	    说明：
+	        tf功能包的方式是，每个需要发布自身姿态的节点使用tf消息发送自身姿态（同时取一个frame名）；每个需要知道任意两个frame之间变换信息的地方使用lookupTransform()函数计算；
+	        小乌龟这个功能包（package）中，每个小乌龟节点（node），没有使用tf格式发送自身姿态，而是使用自定义的topic变量（turtlesim/Pose.h）发送自身姿态，所以需要定义专门的转发节点，把自定义的topic姿态转发成tf消息；
+	        小乌龟启动节点如下：
+
+
+	    turtle_teleop_key：根据键盘输入，发布速度topic1，会被小乌龟1订阅
+	    turtlesim_node：小乌龟1节点；该节点会发布自身姿态turtle1/pose这个topic；
+
+	    turtle_listener：
+	        功能1（生成小乌龟2节点）：使用call服务方式，生成小乌龟2节点（通过call生成小乌龟2节点，但小乌龟2节点的代码不需要放在当前turtle_listener这个节点中；小乌龟2的代码应该是在spawn这个service中；与小乌龟1节点一样，小乌龟2节点会发布自身姿态turtle2/pose这个topic）；
+	        功能2（计算小乌龟12之间的变换信息）：同时订阅tf1和tf2的信息，使用loopupTransform()函数计算小乌龟12之间变换信息；
+	        功能3（发布小乌龟2所需的速度topic）：根据小乌龟12之间的变换信息，计算出小乌龟2跟踪小乌龟1所需的速度，发布速度topic2；
+
+	    turtle1_tf_broadcaster：订阅topic，turtle1/Pose（小乌龟1发布的自身姿态的topic），转发成tf消息，同时给该frame取名turtle1；
+
+	    turtle2_tf_broadcaster：订阅topic，turtle2/Pose（小乌龟1发布的自身姿态的topic），转发成tf消息，同时给该frame取名turtle2；
+
+
+
+
+
+
+
+
+
+
+
+
+【32】.小乌龟例子，turtlex_tf_broadcaster节点
+	1.代码内容，"learning_tf/src/turtle_tf_broadcaster.cpp"
+#include<ros/ros.h>
+#include<tf/transform_broadcaster.h>
+#include<turtlesim/Pose.h>
+
+std::string turtle_name;
+
+void poseCallback(const turtlesim::PoseConstPtr& msg)
+{
+    //新建tf变量，用于发布tf消息
+    static tf::TransformBroadcaster br;
+
+    //将msg这个topic消息，转换成br消息
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(msg->x, msg->y, 0.0));
+    tf::Quaternion q;
+    q.setRPY(0, 0, msg->theta);
+    transform.setRotation(q);
+
+    //发布tf消息
+    tf.setTransform(tf::StampedTransform(transform, ros::Time::now(), "world", turtle_name));
+}
+
+int main(int argc, char **argv)
+{
+    //初始化节点
+    ros::init(argc, argv, "my_tf_broadcaster");
+
+    if(argc!=2)
+    {
+        ROS_ERROR("need turtle name as argument");
+        return -1;
+    }
+    turtle_name=argv[1];
+
+    //订阅小乌龟的速度topic
+    ros::NodeHandle node;
+    ros::Subscriber sub=node.subscribe(turtle_name+"/pose", 10, &poseCallback);
+
+    ros::spin();
+    return 0;
+}
+
+
+	2.各部分注释，头文件部分
+	    #include<tf/transform_broadcaster.h>
+	    #include<turtlesim/Pose.h>
+	    说明：使用tf有关函数，需要用到"tf/transform_broadcaster.h"；在当前cpp文件中，需要用到小乌龟节点发布的自身姿态的topic，数据类型是自定义的，即"turtle/Pose.h"文件中；
+
+
+
+	3.各部分注释，发送tf消息步骤：
+	    void poseCallback(const turtlesim::PoseConstPtr& msg)
+	    {
+	        说明：该函数是订阅小乌龟节点发送的自身位姿topic（turtlesim/Pose.h）的subscribe的回调函数；输入参数msg的数据类型是"turtlesim/Pose"；小疑问，那为何上面的变量写法是turtlesim::PoseConstPtr；
+
+	    static tf::TransformBroadcaster br;
+	        说明：发布tf消息，需要TF发布器；
+
+	    tf::Transform transform;
+	    transform.setOrigin(tf::Vector3(msg->x, msg->y, 0.0));
+	    tf::Quaternion q;
+	    q.setRPY(0, 0, msg->theta);
+	    transform.setRotation(q);
+	        说明：将msg这个topic消息，转换成br消息；存放待发布的tf消息的变量类型是tf::Transform；
+
+
+	    tf.setTransform(tf::StampedTransform(transform, ros::Time::now(), "world", turtle_name));
+	    }
+	        说明：tf消息发布函数，setTransform()；"tranform"变量存放待发布的tf消息，数据类型是"tf::Transform"；"ros::Time::now()"表示发布的时间戳；"world"是任意tf系统固有的frame，即世界坐标系；"turtle_name"变量存放给当前frame取的名字；（小疑问，意思是可以发布当前frame相对于任意frame的姿态信息吗，只要把"world"替换成已有的任意一个frame；）
+	        小疑问："world"和turtle_name的顺序可以互换吗；还是意思第一个frame是必须已经存在的（如world）；第二个frame，如果是第一个调用setTransform()函数，则会生成该frame；之后调用，则不用再生成该frame，因为已经存在，把姿态信息发布到该frame即可；
+
+
+
+	4.各部分注释，订阅小乌龟的姿态topic
+	    ros::NodeHandle node;
+	    ros::Subscriber sub=node.subscribe(turtle_name+"/pose", 10, &poseCallback);
+	    说明：该源文件的作用是，把小乌龟12节点通过topic形式发布的自身姿态，使用tf消息重新转发一次；所以上述语句就是普通的topic订阅；小乌龟12节点发布的自身姿态的topic名分别是"turtle1/pose"、"turtle2/pose"；
+	    小疑问：对于输入变量"&poseCallback"，前面topic订阅函数中，不是直接使用函数名poseCallback即可；为何需要取地址符号吗；
+
+
+
+
+
+
+
+
+
+
+
+
+【33】.小乌龟例子，turtle_listener节点
+	1.代码内容，learning_tf/src/turtle_tf_listener.cpp
+#include<ros/ros.h>
+#include<tf/transform_listener.h>
+#include<geometry_msgs/Twist.h>
+#include<turtlesim/Spawn.h>
+
+int main(int argc, char **argv)
+{
+    //初始化节点
+    ros::init(argc, argv, "my_tf_listener");
+    ros::NodeHandle node;
+
+    //通过调用spawn服务，生成第二只小乌龟
+    ros::service::waitForService("spawn");
+    ros::ServiceClient add_turtle=node.ServiceClient<turtlesim::Spawn>("spawn");
+    turtlesim::Spawn srv;
+    add_turtle.call(srv);
+
+    //定义turtle2发布速度topic的发布器
+    ros::Publisher turtle_vel=node.advertise<geometry_msgs::Twist>("turtle2/cmd_vel", 10);
+
+    //定义TF监听器
+    tf::TransformListener listener;
+
+    ros::Rate rate(10.0);
+    while(node.ok())
+    {
+        tf::StampedTransform transform;
+        try
+        {
+	//查找turtle1与turtle2之间的变换信息
+	listener.waitForTransform("/turtle2", "/turtle1",ros::Time(0), ros::Duration(3.0));
+	listener.loopupTransform("/turtle2", "/turtle1", ros::Time(0), transform);
+        }
+        catch(tf::TransformException &ex)
+        {
+	ROS_ERROR("%s", ex.what());
+	ros::Duration(1.0).sleep();
+	continue;
+        }
+
+        //根据turtle1与turtle2之间的变换关系，计算turtle2需要的运动线速度和角速度（因为需要turtle2跟着turtle1运动）
+        geometry_msgs::Twist vel_msg;
+        vel_msg.angular.z = 4.0*atan2(transform.getOrigin().y(), transform.getOrigin().x());
+        vel_msg.linear.x = 0.5*sqrt(pow(transform.getOrigin(), 2)+pow(transform.getOrigin(), 2));
+
+        //发布turtle2需要的运动topic
+        turtle_vel.publish(vel_msg);
+
+        rate.sleep();
+    }
+    return 0;
+}
+
+
+	2.各部分注释，头文件有关
+	    #include<tf/transform_listener.h>
+	    #include<geometry_msgs/Twist.h>
+	    #include<turtlesim/Spawn.h>
+	    说明：对于"tf/transform_listener.h"，因为当前源文件中，使用到tf有关的函数，即tf监听器，然后loopupTransform()等函数；对于"geometry_msgs/Twist.h"，因为需要发布turtle2所需的速度topic，数据类形式"geometry_msgs::Twist"；对于"turtlesim/Spawn.h"，因为当前文件中调用了spawn服务，生成小乌龟2，在turtlesim功能包中应该存在spawn服务有关的节点；
+	    小疑问：当前源文件中使用到的pow()，sqrt()等函数来自哪个库吗；
+
+
+	3.各部分注释，初始化节点
+	    ros::NodeHandle node;
+	    说明：好像是每个源文件一个节点；然后这个节点变量，可以发布topic，订阅topic，提供Service，请求Service；例如当前源文件中，节点node请求服务（node.ServiceClient()）；同时节点node发布topic（node.advertise()）；
+
+
+	4.各部分注释，通过调用spawn服务，生成第二只小乌龟
+	    ros::service::waitForService("spawn");
+	    ros::ServiceClient add_turtle=node.ServiceClient<turtlesim::Spawn>("spawn");
+	    turtlesim::Spawn srv;
+	    add_turtle.call(srv);
+	    说明：请求服务"spawn"；请求服务时，需要先对srv变量的请求部分填写，服务端应答后，对srv变量的应答部分填写；此处srv变量的两个部分都为空，因为实际作用是生成新的turtle；
+	    小疑问："spawn"这个服务，没有输入新生成的turtle的名字，而后面该小乌龟节点发布的自身状态变量是"turtle2/pose"，说明该小乌龟节点的名字是turtle2了；没有指定，自动按turtlex，x顺序命名这样吗，代码中设定的吗
+
+
+	5.各部分注释，while(node.ok())
+	    小疑问：前面使用的是ros::ok()，与node.ok()函数通用的吗；
+
+
+	6.各部分注释，获得turtle12之间变换信息
+	    listener.waitForTransform("/turtle2", "/turtle1",ros::Time(0), ros::Duration(3.0));
+	    listener.loopupTransform("/turtle2", "/turtle1", ros::Time(0), transform);
+	    说明：使用loopupTransform()函数，可以获得任意指定两个frame之间的变换信息，并存放到"transform"变量中；"ros::Time(0)"表示查询当前时刻的变换信息；
+	    说明：在waitForTransform()函数中，ros::Duration(3.0)是超时时间，该函数会阻塞程序运行，到达超时时间则退出；
+	    函数原型（没看懂）：
+	        waitForTransform(const std::string &target_frame, const std::string &source_frame, const ros::Time &time, const ros::Duration &timeout);
+	        loopupTransform(const std::string &target_frame, const std::string &source_frame, const ros::Time &time, StampedTransform &transform);
+
+
+	7.各部分注释，try()函数
+	    try
+	    {}
+	    catch(tf::TransformException &ex)
+	    {}
+	    说明：不详细；
+
+
+	8.各部分注释，根据turtle12变换关系，计算turtle2所需速度
+	    vel_msg.angular.z = 4.0*atan2(transform.getOrigin().y(), transform.getOrigin().x());
+	    vel_msg.linear.x = 0.5*sqrt(pow(transform.getOrigin().x(), 2)+pow(transform.getOrigin().y(), 2));
+	    说明：前面，transform变量赋值时候，使用transform.setOrigin()，transform.setRotation()函数；此处，获得具体分量可用函数，transform.getOrigin().x()、transform.getOrigin().y()；
+	    小疑问：vel_msg变量中的包含的angular.z、linear.x，是否还有其他部分，为何对这两个部分赋值吗；上述根据turtle1和turtle2之间相对距离，计算turtle2所需速度的公式不清楚；
+
+
+
+
+
+
+
+
+
+
+
+
+
+【34】.小乌龟例子，launch文件
+	1.小乌龟功能包各节点作用（重复，前面已有）
+	    turtle_teleop_key：根据键盘输入，发布速度topic1，会被小乌龟1订阅
+	    turtlesim_node：小乌龟1节点；该节点会发布自身姿态turtle1/pose这个topic；
+
+	    turtle_listener：
+	        功能1（生成小乌龟2节点）：使用call服务方式，生成小乌龟2节点（通过call生成小乌龟2节点，但小乌龟2节点的代码不需要放在当前turtle_listener这个节点中；小乌龟2的代码应该是在spawn这个service中；与小乌龟1节点一样，小乌龟2节点会发布自身姿态turtle2/pose这个topic）；
+	        功能2（计算小乌龟12之间的变换信息）：同时订阅tf1和tf2的信息，使用loopupTransform()函数计算小乌龟12之间变换信息；
+	        功能3（发布小乌龟2所需的速度topic）：根据小乌龟12之间的变换信息，计算出小乌龟2跟踪小乌龟1所需的速度，发布速度topic2；
+
+	    turtle1_tf_broadcaster：订阅topic，turtle1/Pose（小乌龟1发布的自身姿态的topic），转发成tf消息，同时给该frame取名turtle1；
+
+	    turtle2_tf_broadcaster：订阅topic，turtle2/Pose（小乌龟1发布的自身姿态的topic），转发成tf消息，同时给该frame取名turtle2；
+
+
+	2.launch文件内容
+	    说明：文件位置，"learning_tf/launch/start_demo_with_listener.launch"
+<launch>
+    <!-- 小乌龟的仿真器，turtle1 -->
+    <node pkg="turtlesim" type="turtlesim_node" name="sim"/>
+
+    <!-- 键盘控制 -->
+    <node pkg="turtlesim" type="turtle_teleop_key" name="teleop" output="screen"/>
+
+    <!-- 两只小乌龟姿态信息的tf广播 -->
+    <node pkg="learning_tf" type="turtle_tf_broadcaseter" args="/turtle1" name="turtle1_tf_broadcaster"/>
+    <node pkg="learning_tf" type="turtle_tf_broadcaseter" args="/turtle2" name="turtle1_tf_broadcaster"/>
+
+    <!-- 监听tf广播，并控制turtle2移动 -->
+    <node pkg="learning_tf" type="turtle_tf_listener" name="listener"/>
+</launch>
+
+
+
+
+
+
+
+
+
+
+
+
+【35】.Qt工具箱
+	1.杂
+	    关于Qt工具箱：为了方便可视化调试和显示，ROS提供了一个Qt架构的后台图形工具套件，rqt_common_plugins；包含多个可用工具；
+	    安装：
+	        sudo apt-get install ros-kinetic-rqt
+	        sudo apt-get install ros-kinetic-rqt-common-plugins
+
+
+	2.日志输出工具，rqt_console（不详细）
+	    启动命令，终端窗口：rqt_console
+	    说明：显示不同级别的ROS消息（包括Debug，Info，Error，Fatal）
+
+
+	3.计算图可视化工具，rqt_graph（不详细）
+	    启动命令，终端窗口：rqt_graph
+	    说明：显示系统中当前存在的所有节点（node），和节点之间的连接关系；
+
+
+	4.数据绘图工具，rqt_plot（不详细）
+	    启动命令，终端窗口：rqt_plot
+	    说明：rqt_plot是一个二维数值曲线绘图工具，可以将需要显示的topic数据在xy坐标系上绘制；在topic输入框输入即可；如果不确定topic名称，可以使用rostopic list查看；
+
+
+	5.参数动态配置工具，rqt_reconfigure（不详细）
+	    启动命令，终端窗口：rosrun rqt_reconfigure rqt_reconfigure
+	    说明：rqt_reconfigure工具可以在不重启系统的情况下，动态配置ROS系统的参数；但是该功能需要在代码中设置参数的相关属性，从而支持动态配置；
+
+
+
+
+
+
+
+
+
+
+
+【36】.rviz三维可视化平台
+	1.杂
+	    1概述：可视化工具；与Gazebo对比，Gazebo是仿真，提供一个虚拟的世界；RViz是可视化，将topic，service等信息以曲线等形式可视化的呈现出来；RViz全称：the Robot Visualization tool，机器人可视化工具；
+
+
+	1.安装运行rviz
+	    1.安装：
+	        sudo apt-get install ros-kinetic-rviz
+	        说明：rviz已经集成在桌面完整版的ROS中，如果已经安装桌面完整版的ROS，可以不再安装；
+
+	    2.运行：
+	        新终端：roscore
+	        新终端：rosrun rviz rviz
+
+
+	2.rviz界面简介
+	    说明：rviz默认界面包含如下部分
+	    3D视图区：软件正中间；用于显示可视化内容，默认黑色；
+	    工具栏：软件最上方一排按钮；用于提供视角控制，目标设置，发布地点等；
+	    显示项列表：软件左侧栏目；用于显示当前选择的显示插件；
+	    视角设置区：软件右侧栏目；可以设置视角；
+	    时间显示区：软件最下方一栏；用于显示当前系统时间和ROS时间；
+
+
+	3.添加可视化内容
+	    说明：在软件左侧栏目的"显示项列表"下方有"Add"按钮，可以添加显示插件；rviz的逻辑是，对于每一种需要可视化显示的topic数据，需要有该数据类型对应的显示插件（有系统提供，可以自行编写），在"显示项列表"中添加需要的插件，在该插件中设置要显示的topic，即可显示出来；
+
+	    添加显示插件步骤：左侧的"显示项列表"，点击"Add"按钮，弹出对话框/选择需要的显示插件（如"Laser Scan"），在下方的"Display name"栏填入唯一的名称（如"Laser_base"），点击"ok"返回"显示项列表"/点击插件前的加号，展开属性列表，在"Topic"属性中填入对应topic；
+
+	    显示问题排查（不详细）：如果显示有问题，检查左侧"显示项列表"中每个插件前的Status；Statu有4种状态，OK、Warning、Error、Disabled；如果Status不是OK，根据提示排查原因（不详细）；
+
+
+
+	4.系统提供的显示插件（不详细）
+	    说明：在点击"Add"后弹出的对话框中，选择"By display type"选项卡；则会显示出当前可用的多个类别的显示插件（如"moveit_ros_visualization"，"rviz"等）；其中"rviz"类是系统提供的默认插件，各个插件作用简介如下：
+
+	    //无数据类型
+	    Axes
+	        简介：显示坐标轴
+	        可以显示的topic类型：无
+
+	    Grid
+	        简介：显示2D或者3D栅格；
+	        可以显示的topic类型：无
+
+	    RobotModel
+	        简介：显示机器人模型，根据TF变换确定机器人模型的位姿（小疑问，意思是机器人模型的关节是可变的吗）
+	        可以显示的topic类型：无
+
+	    TF
+	        简介：显示TF变换的层次结构；
+	        可以显示的topic类型：无
+
+
+
+	    //sensor_msgs功能包
+	    Effort
+	        简介：显示机器人转动关节的力
+	        可以显示的topic类型：sensor_msgs/JointStates
+
+	    Camera
+	        简介：打开一个新窗口，并显示摄像头图像；
+	        可以显示的topic类型：
+		sensors_msgs/Image
+		sensors_msgs/CameraInfo
+
+	    Image
+	        简介：打开一个新窗口，并显示图像信息（不需要订阅摄像头校准信息）（没看懂）
+	        可以显示的topic类型：sensor_msgs/Image
+
+	    Laser Scan
+	        简介：显示激光雷达数据；
+	        可以显示的topic类型：sensor_msgs/LaserScan
+
+	    Point Cloud(2)
+	        简介：显示点云数据；（小疑问，与激光雷达数据的Laser Scan的区别在哪里吗）
+	        可以显示的topic类型：
+		sensor_msgs/PointCloud
+		sensor_msgs/PointCloud2
+
+	    Range
+	        简介：显示声纳或者红外传感器反馈的测量数据（锥形范围）
+	        可以显示的topic类型：sensor_msgs/Range
+
+
+	    //nav_msgs功能包
+	    Grid Cells
+	        简介：显示导航功能包中代价地图的障碍物栅格信息；
+	        可以显示的topic类型：nav_msgs/GridCells
+
+	    Map
+	        简介：在大地平面上显示地图信息（没看懂）
+	        可以显示的topic类型：nav_msgs/OccupancyGrid
+
+	    Path
+	        简介：显示导航过程中的路径信息；
+	        可以显示的topic类型：nav_msgs/Path
+
+	    Odometry
+	        简介：绘制一段时间内的里程计位姿信息；
+	        可以显示的topic类型：nav_msgs/Odometry
+
+
+
+	    //geometry_msgs功能包
+	    Point
+	        简介：使用圆球体绘制一个点；
+	        可以显示的topic类型：geometry_msgs/PointStamped
+
+	    Pose
+	        简介：使用箭头或者坐标轴方式绘制一个位姿；
+	        可以显示的topic类型：geometry_msgs/PoseStamped
+
+	    Pose Array
+	        简介：根据位姿列表，绘制一组位姿箭头；
+	        可以显示的topic类型：geometry_msgs/PoseArray
+
+	    Polygon
+	        简介：绘制多边形轮廓；
+	        可以显示的topic类型：geometry_msgs/Polygon
+
+
+	    Wrench
+	        简介：显示力信息（力用箭头表示，转矩用箭头和圆表示）
+	        可以显示的topic类型：geometry_msgs/WrenchStamped
+
+
+
+	    //visualization_msgs功能包
+	    Markers
+	        简介：绘制各种基本形状（箭头、立方体、球体、圆柱体、线带、线列表、立方体列表、球体列表、点、文本、mesh数据、三角形列表等）
+	        可以显示的topic类型：
+		visualization_msgs/Marker
+		visualization_msgs/MarkerArray
+
+	    InteractiveMarker
+	        简介：显示3D交互式标记（不确定，Marker是指代一种可以用鼠标点击交互的控件之类的）
+	        可以显示的topic类型：
+		visualization_msgs/InteractiveMarker
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+【37】.rosbag数据记录与回放
+	1.录制topic
+	    1.启动小乌龟例子
+	        新终端：roscore
+	        新终端：rosrun turtlesim turtlesim_node
+	        新终端：rosrun turtle_teleop_key
+
+	    2.查看当前系统中的topic：rostopic list -v，返回结果如下
+	        Published topics:
+	        /turtle1/color_sensor [turtlesim/Color] 1 publisher
+	        /turtle1/cmd_vel [geometry_msgs/Twist] 1 publisher
+	        /rosout [rosgraph_msgs/Log] 2 publishers
+	        /rosout_agg [rosgraph_msgs/Log] 1 publisher
+	        /turtle1/pose [turtlesim/Pose] 1publisher
+
+	        Subscribed topics:
+	        /turtle1/cmd_vel [geometry_msgs/Twist] 1 subscriber
+	        /rosout [rosgraph_msgs/Log] 1 subscriber
+	        说明：上述topic中，只有"/turtle1/cmd_vel"是外界输入的（键盘），然后被小乌龟节点订阅；其他topic都是小乌龟节点发布的；
+
+	    3.录制系统中所有的topic
+	        mkdir ~/bagfiles
+	        cd ~/bagfiles
+	        rosbag record -a
+	        说明：-a（all）表示录制当前系统中所有的topic；录制文件后缀bag；按下"Ctrl+C"，停止录制；
+	        小疑问：实际只要录制"turtle1/vel_cmd"这个topic即可吗，因为其他topic是小乌龟节点在订阅"turtle1/vel_cmd"信息后，发布出来的；如果全部录制，下次播放时，则上述其他topic中，既有rosbag在播放，也有小乌龟节点在播放；
+	        小疑问：假设存在以下订阅关系，录制所有topic，再播放是否就存在问题；功能包订阅外界输入消息topic_a，功能包的节点node_b，订阅topic_a，发布topic_b；功能包的node_c，订阅topic_b，发布topic_c；依次进行，直到功能包的node_z，订阅topic_y，发布topic_z；此时如果录制所有topic，然后再次运行时，播放所有topic，是否就乱套了；
+
+
+	
+	2.播放bag文件
+	    1.查看bag文件信息
+	        rosbag info <your bagfile>
+	        返回信息说明：包括持续时间（duration），包含的topic（每个topic共录制到几个msgs），包含的数据类型（types）等；
+
+	    2.播放bag文件
+	        rosbag play <your bagfile>
+	        说明：播放过程中，可以使用"Crtl+C"终止播放；空格键，暂停播放；s按键，逐条播放；
+
+
+
+	3.其他rosbag命令
+	    rosbag record -O [filename.bag] [topic_name]
+	        说明：录制指定的topic，举例如下，rosbag record -O test01.bag /turtle1/command_velocity；前面的"rosbag record -a xxx.bag"是录制当前系统中所有topic；
+	        小疑问：参数-O是指录制指定topic吗；
+
+	    rosbag info [filename.bag]
+	        说明：打印出消息的概况，如开始结束时间，主题等；
+
+	    rosbag help
+	        说明：（不详细）帮助信息；
+
+	    rosbag check
+	        说明：（不详细）检查指定包是否可以在当前系统运行，是否可以迁移；
+
+	    rosbag decompress
+	        说明：（不详细）压缩；
+
+	    rosbag filter
+	        说明：（不详细）解压；
+
+	    rosbag fix
+	        说明：（不详细）修复包文件包；
+
+
+
+
+
+	    reindex：重新索引包文件？？
+
+
+
+
+
+
+
+
+【38】.MRobot平台的搭建
+	1.杂
+	    关于MRobot：MRobot是ROSClub发布的轮式机器人平台（和实验室的D1移动平台基本一样）；使用2个主动轮，中间1个从动轮的方案；MRobot只提供下方的移动部分，控制部分需要自己选配（如采用树莓派，还是PC，传感器采用激光雷达，还是摄像头等，默认是没有的）；
+
+	    控制方案：
+	        方案1，可以采用PC作为控制器；在PC上安装ROS，通过USB串口与MRobot通信；
+	        方案2（推荐）：采用"PC+嵌入式系统（树莓派）"方案；树莓派上运行ROS，使用USB串口与MRobot通信；然后PC也运行ROS，使用ROS的分布式方法，在PC上运行复杂度高的SLAM等算法；
+	        方案2中的嵌入式系统：可以采用Raspberry Pi、TK1、RK3288、Odriod、Arduino等；
+
+
+
+	2.树莓派安装Ubuntu（重复，简单描述）
+	    说明：作者选用安装Ubuntu 16.04 MATE；其中Ubuntu MATE是Ubuntu Linux官方的一个派生版，基于GNOME2派生而来的MATE桌面环境；
+
+	    1.下载安装
+	        说明：官方网站，https://ubuntu-mate.org/raspberry-pi/；镜像写入U盘，使用"Win32DiskImager"软件；
+
+	    2.设置WIFI（不详细）
+	        说明：在Ubuntu MATE桌面的右上角点击网络连接图标，可以连接WIFI，并且类似windows，系统会记住wifi密码，下次重启后会自动连接；为了方便与PC通信，可以在网络设置中手动配置IP，这样每次启动后IP地址不会发生改变；
+	        杂：关于树莓派的WiFi模块，树莓派3板载WiFi模块，树莓派2需要使用USB Wifi设备；
+
+	    3.替换软件源
+	        修改软件源前，备份文件：
+	        sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+	        sudo vi /etc/apt/sources.list
+
+	        修改为清华的软件源，sources.list文件内容替换为：
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial-updates main restricted universe multiverse
+deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial-updates main restricted universe multiverse
+
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial-security main restricted universe multiverse
+deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial-security main restricted universe multiverse
+
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial-backports main restricted universe multiverse
+deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial-backports main restricted universe multiverse
+
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial main restricted universe
+deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ xenial main restricted universe
+
+	        更新系统的软件源：sudo apt-get update
+
+
+
+	3.树莓派安装ROS（重复，简单描述）
+	    1.添加Ubuntu 16.04软件源，这里使用国内易科实验室的软件源
+	        sudo sh -c '. /etc/lsb-release && echo "deb http://ros.exbot.net/rospackage/ros/ubuntu/$DISTRIB_CODENAME main" > /etc/apt/sources.list.d/ros-latest.list'
+	        说明：好像是一般的ubuntu源（如上面的清华源）中没有ros的安装包，需要特定的网站中才有，所以需要设置；
+
+	    2.设置密钥
+	        sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net: 80 --recv-key 421C 365B D9FF 1F71 7815 A389 5523 BAEE B01F A116
+
+	    3.更新软件源
+	        sudo apt-get update
+
+	    4.安装ROS
+	        sudo apt-get install ros-kinetic-ros-base
+	        说明：因为树莓派的性能有限，不推荐安装桌面完整版，所以安装基本功能包即可；
+
+	    5.安装rosdep工具
+	        sudo rosdep init
+	        rosdep update
+
+	    6.设置环境变量
+	        echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+	        source ~/.bashrc
+
+	    7.安装其他功能包
+	        sudo apt-get install python-rosinstall python-rosinstall-generator python-wstool build-essential
+
+	    8.测试安装，roscore
+
+
+
+
+
+
+
+
+
+
+【39】.MRobot，通信协议
+	说明：因为MRobot是开源项目，已经有可以下载的功能包，所以可以了解下他自定义的一些实现的方法；（其实自己也可以做，因为都是一堆自己定义的东西，但即然已经有开源项目，已经做好了很多工作，记录下的）
+	开源代码地址：https://github.com/ROSClub/mrobot.git
+
+
+	1.树莓派与MRobot通信协议
+	    说明：MRobot的运动部分估计是一个单片机控制，但已经规定好通信协议，并烧录到下方的单片机中，所以树莓派部分编程需要遵守相同的协议；
+
+	    1.格式：[消息头(2字节)] [命令(2字节)] [长度(1字节)] [数据(n字节，n=长度)] [校验(1字节)] [消息尾(2字节)]
+	        说明：消息头，固定为[0x55 0xaa]；消息尾，固定为[0x0d 0x0a]；命令段有2个字节，可以使用的命令如下：
+
+	    2.MRobot->控制器，"命令段"内容
+	        0xa5 0x5a，发送速度信息
+	        0xa5 0x55，发送电池信息
+	        0xa5 0xaa，发送超声波信息
+	        0xa5 0xa5，发送惯导信息
+
+	        0x5a 0x5a，发送速度、电池信息
+	        0x5a 0x55，发送速度、电池、超声波信息
+	        0x5a 0xaa，发送速度、电池、惯导信息
+	        0x5a 0xa5，发送速度、电池、惯导、超声波信息
+	        说明："命令段"说明了后面需要发送的信息类型，然后在"数据段"发送对应的内容；小疑问，命令中发送多个信息组合的，其实排列组合还有很多中组合方式；
+
+
+	    3.MRobot->控制器，"数据段"内容
+	        0xa5 0x5a，[左轮速度(4字节浮点数)，右轮速度(4字节浮点数)]
+	        0xa5 0x55，[电池电量(4字节浮点数)，电量百分比(4字节浮点数)]
+	        0xa5 0xaa，[前超声波(4字节浮点数)，后超声波(4字节浮点数)，左超声波(4字节浮点数)，右超声波(4字节浮点数)]
+	        0xa5 0xa5，[pitch角(4字节浮点数)，roll角(4字节浮点数)，yaw角(4字节浮点数)，温度(4字节浮点数)]
+	        说明：发送单种类型数据时，数据的内容如上所示；如果单次发送多种数据类型时，按数据类型依次组合即可；
+
+
+	    4.控制器->MRobot
+	        0xaa 0xaa，请求发送速度信息
+	        0xaa 0x55，请求发送电池信息
+	        0xaa 0xa5，请求发送超声波信息
+	        0xaa 0x5a，请求发送惯导信息
+
+	        0x55 0xaa，请求发送速度、电池信息
+	        0x55 0x55，请求发送速度、电池、超声波信息
+	        0x55 0xa5，请求发送速度、电池、惯导信息
+	        0x55 0x5a，请求发送速度、电池、惯导、超声波信息
+	        说明：这部分是控制器发送给MRobot的，在"命令段"是请求的数据类型；在"数据段"固定都是发送要求小车的左轮速度和右轮速度；"数据段"内容固定为[左轮速度(4字节整数)，右轮速度(4字节整数)]；
+
+
+
+
+
+
+
+
+
+
+
+
+
+【40】.MRobot，树莓派上node，mrobot_bringup.cpp
+	1.部分代码，mrobot_bringup.cpp
+	    说明：代码文件为，"mrobot_bringup/src/mrobot_bringup.cpp"，下面仅列出部分代码内容；
+
+bool MRobot::spinOnce(double RobotV, double YawRate)
+{
+    writeSpeed(RobotV, YawRate);
+        说明：下发机器人的期望速度；因为是通过串口发送给小车的单片机，估计是调用树莓派中的一些串口函数；（因为有针对树莓派GPIO口的软件包，有专门的函数的）
+
+
+    readSpeed();
+        说明：读取机器人实际速度；同样，估计是读取串口缓存里的数据之类的函数；
+
+
+    current_time_=ros::Time::now();
+    geometry_msgs::TransformStamped odom_trans;
+    odom_trans.header.stamp=current_time_;
+    odom_trans.header.frame_id="odom";
+    odom_trans.child_frame_id="base_footprint";
+    geometry_msgs::Quanternion odom_quat;
+    odom_quat=tf::createQuanternionMsgFromYaw(th_);
+    odom_trans.transform.translation.x=x_;
+    odom_trans.transform.translation.y=y_;
+    odom_trans.transform.translation.z=0.0;
+    odom_trans.transform.rotation=odom_quat;
+
+    odom_broadcaster_.sendTransform(odom_trans);
+        说明：此处把这些变量（current_time_、x_、y_、th_、"odom"、"base_footprint"），打包一下，用tf消息发布出去，其中frame叫做"odom"；小疑问，这些变量是该函数外面，不知道哪里赋值的，这里仅仅就是转发一下；然后小车又没有多个坐标系，为何需要把位置转发成tf消息吗；
+
+
+    nav_msgs::Odometry msg1;
+    msg1.header.stamp=current_time_;
+    msg1.header.frame_id="odom";
+
+    msg1.pose.pose.position.x=x_;
+    msg1.pose.pose.position.y=y_;
+    msg1.pose.pose.position.z=z_;
+    msg1.pose.pose.orientation=odom_quat;
+    msg1.pose.covariance=odom_pose_covariance;
+
+    msg1.child_frame_id="base_footprint";
+    msg1.twist.twist.linear.x=vx_;
+    msg1.twist.twist.linear.y=vy_;
+    msg1.twist.twist.angular.z=vth_;
+    msg1.twist.covariance=odom_twist_covariance;
+
+    pub_.publish(msg1);
+        说明：此处把这些变量（"odom"、x_、y_、z_、th_、odom_pose_covariance、"base_footprint"、vx_、vy_、odom_twist_covariance），打包成"nav_msgs::Odometry"数据类型，发布到某个topic上去（使用函数pub_.publish()函数，说明topic名是在定义"pub_"变量时定义的，此处未知）；估计是里程计信息吗，然后PC端订阅该里程计topic；
+}
+
+
+	2.各部分注释，sendTransform()函数（用处不大，可以跳过）
+	    说明：将上述代码中，sendTransform()函数的数据准备部分，推测出数据类型的格式；与前面sendTransform()函数的数据准备部分对比，两者的数据类型的格式验证是相同的；
+
+	    1.上述sendTransform()函数，数据准备部分：
+	        odom_trans.header.stamp=current_time_;
+	        odom_trans.header.frame_id="odom";
+
+	        odom_trans.child_frame_id="base_footprint";
+	        geometry_msgs::Quanternion odom_quat;
+	        odom_quat=tf::createQuanternionMsgFromYaw(th_);
+
+	        odom_trans.transform.translation.x=x_;
+	        odom_trans.transform.translation.y=y_;
+	        odom_trans.transform.translation.z=0.0;
+	        odom_trans.transform.rotation=odom_quat;
+
+
+	    2.推测出TransformStamped类型的格式
+	odom_trans（"TransformStamped"类型）
+	{
+	    transform（？类型）
+	    {
+	        translation（？类型）
+	        {
+		x
+		y
+		z
+	        }
+
+	        rotation（"geometry_msgs::Quanternion"类型）
+	        {
+		x
+		y
+		z
+		w
+	        }
+	   }
+
+	    header（？类型）
+	    {
+	        stamp
+	        frame_id
+	    }
+
+	    child_frame_id
+	}
+
+
+	    3.之前sendTranform()函数，数据准备过程
+	        tf::Transform transform;
+	        transform.setOrigin(tf::Vector3(msg->x, msg->y, 0.0));
+	        tf::Quaternion q;
+	        q.setRPY(0, 0, msg->theta);
+	        transform.setRotation(q);
+	        tf.setTransform(tf::StampedTransform(transform, ros::Time::now(), "world", turtle_name));
+
+
+
+
+	3.各部分注释，msg1的数据类型（用处不大，可以跳过）
+	    说明：根据msg1变量的数据准备过程，可以推测出"nav_msgs::Odometry"数据类型的格式；
+
+	    1.msg1变量的数据准备过程
+	        nav_msgs::Odometry msg1;
+	        msg1.header.stamp=current_time_;
+	        msg1.header.frame_id="odom";
+
+	        msg1.pose.pose.position.x=x_;
+	        msg1.pose.pose.position.y=y_;
+	        msg1.pose.pose.position.z=z_;
+	        msg1.pose.pose.orientation=odom_quat;
+	        msg1.pose.covariance=odom_pose_covariance;
+
+	        msg1.child_frame_id="base_footprint";
+	        msg1.twist.twist.linear.x=vx_;
+	        msg1.twist.twist.linear.y=vy_;
+	        msg1.twist.twist.angular.z=vth_;
+	        msg1.twist.covariance=odom_twist_covariance;
+
+
+	    2.推测的数据类型格式
+	msg1（"nav_msgs::Odometry"类型）
+	{
+	    header（？类型）
+	    {
+	        stamp
+	        frame_id
+	    }
+
+	    child_frame_id
+
+	    twist（？类型）
+	    {
+	        twist（？类型）
+	        {
+		linear（？类型）
+		{
+		    x
+		    y
+		    z
+		}
+
+		angular（？类型）
+		{
+		    x
+		    y
+		    z
+		}
+	        }
+
+	        covariance（？类型）
+	        {xxx}
+	    }
+
+
+	    pose（？类型）
+	    {
+	        pose（？类型）
+	        {
+		position（？类型）
+		{
+		    x
+		    y
+		    z
+		}
+
+		orientation（"geometry_msgs::Quanternion"类型）
+		{
+		    x
+		    y
+		    z
+		    w
+		}
+	        }
+
+	        covariance（？类型）
+	        {xxx}
+	    }
+	}
+
+
+	4.上述文件功能总结
+	    说明：上面分析的树莓派上node文件为，"mrobot_bringup/src/mrobot_bring.cpp"的部分代码；包括功能总结如下：
+	    1.writeSpeed()函数：估计是订阅上层运动控制的topic，通过串口发送给小车的单片机；
+	    2.readSpeed()函数：估计是通过串口和单片机通信，获得编码器数据；
+	    3.odom_broadcaster_.sendTransform()函数：好像是把读取到的编码器数据（x_，y_，th_之类的），打包成tf消息发送出去；
+	    4.pub_.publish(msg1)函数：好像是把读取到的编码器数据（x_，y_，z_，th_，vx_，vy_等），打包发布到某个topic上去；
+
+
+
+
+
+
+
+
+
+
+
+【41】.MRobot，树莓派上node，其他
+
+	1.部分代码，mrobot.cpp
+	    说明：代码文件，mrobot_bringup/src/mrobot.cpp；
+
+	    部分代码内容：
+vx_=(vel_right.odometry_float+vel_left.odometry_float)/2/1000;
+vth_=(vel_right.odometry_float-vel_left.odometry_float)/ROBOT_LENGTH;
+
+curr_time=ros:: Time:: now();
+
+double dt_=(curr_time-last_time_).toSec();
+double delta_x=(vx_*cos(vth_)-vy_*sin(th_))*dt;
+double delta_y=(vx_*sin(vth_)+vy_*cos(th_))*dt;
+double delta_th=vth_*dt;
+
+x_+=delta_x;
+y_+=delta_y;
+th_+=delta_th;
+last_time_=curr_time;
+
+	    分析说明：
+	        小疑问：树莓派与单片机通信，获得编码器数据不是应该是mrobot_bringup.cpp中的readSpeed()函数吗；上面的"vel_right.odometry_float"、"vel_left.odometry_float"好像就是编码器中读取的数据（编码器返回的是速度吗？）；
+	        说明：上述代码作用好像是，使用编码器返回的左右轮速度信息"vel_right.odometry_float"、"vel_left.odometry_float"，换算成直线速度和转弯速度（vx_，th_），再换算成路程（x_，y_，th_）；这些量又在"mrobot_bringup.cpp"中的"odom_broadcaster_.sendTransform()"、"pub_.publish()"函数中用到，作为里程计数据发布出去；
+
+
+
+	2.部分代码，mrobot_teleop.launch
+	    说明：此处不是单一node的cpp源代码；是MRobot的一个功能包，在教材中没有详细解释，功能猜测如下；常用命令，roslaunch mrobot_teleop mrobot_teleop.launch；估计作用与小乌龟实验中键盘node类似，即接受键盘输入，发布到cmd_vel这个topic上；
+
+
+
+
+
+
+
+
+
+
+
+【42】.摄像头功能包
+	1.usb_cam功能包，发布的topic
+	    说明：usb_cam功能包是针对V4L协议USB摄像头的驱动包；核心节点是usb_cam_node；该功能包发布的topic如下：
+
+	    topic名称，"~<camera_name>/image"，数据类型，"sensor_msgs/Image"
+	    说明：该topic发布的是摄像头的图像数据，在rviz等软件中订阅即可显示；小疑问，topic名称中的"~<camera_name>"是指命名空间中的私有名称吗（必须等于节点的局部名称？）
+
+
+
+	2.usb_cam功能包，提供的parameter server
+	    说明：这些是参数服务器中可以配置的参数；在launch启动文件中可以设置；
+
+	    1.参数，~video_device；数据类型，string；默认值，"/dev/video0"
+	        说明：摄像头的设备号；（不确定），好像是，usb_cam功能包会发布名称为"~<camera_name>/image"的topic，内容是摄像头的画面；然后usb_cam功能包获取哪个摄像头设备的数据，就是由该参数"~video_device"指定（好像在linux系统中，在/dev/路径下可以查看系统当前可用的设备）；
+	        小疑问，"~video_device"同样是指私有名称？实际全局名称是"节点的局部名称/video_device"？
+
+
+	    2.参数，~camera_frame_id；数据类型，string；默认值，"head_camera"
+	        小疑问：不确定该参数的作用；因为指定需要采集的设备名通过"~video_device"参数指定；功能包发布的图像数据topic名，通过"~<camera_name>/image"这个topic指定；
+
+
+	    3.参数，~camera_name；数据类型，string；默认值，"head_camera"
+	        小疑问，好像就是指定功能包发布的图像topic的名称中"~<camera_name>/image"；即图像topic的具体名称与该参数有关吗
+
+
+	    4.参数，~image_width；数据类型，int；默认值，640
+	        说明：图像的横向分辨率；
+
+
+	    5.参数，~image_height；数据类型，int；默认值，480
+	        说明：图像的纵向分辨率；
+
+
+	    6.参数，~pix_format；数据类型，string；默认值，"mjpeg"
+	        说明：像素编码；可选值，"mjpeg"，"yuyv"，"uyvy"
+
+
+	    7.参数，~io_method；数据类型，string；默认值，"mmap"
+	        说明（不详细），IO通道；可选值，"mmap"，"read"，"userptr"
+
+
+	    8.参数，~framerate；数据类型，int；默认值，30
+	        说明（不详细），帧率；
+
+
+	    9.参数，~brightness；数据类型，int；默认值，32
+	        说明：亮度；可选范围，0-255
+
+	    10.参数，~saturation；数据类型，int；默认值，32
+	        说明：饱和度；可选范围，0-255
+
+	    11.参数，~contrast；数据类型，int；默认值，32
+	        说明：对比度；可选范围，0-255
+
+	    12.参数，~sharpness；数据类型，int；默认值，22
+	        说明：清晰度；可选范围，0-255
+
+
+	    13.参数，~autofocus；数据类型，bool；默认值，false
+	        说明：自动对焦；
+
+	    13.参数，~focus；数据类型，int；默认值，51
+	        说明：焦距（非自动对焦状态下有效）
+
+	    14.参数，~camera_info_url；数据类型，string；默认值，无
+	        说明：摄像头校准文件路径；
+
+
+
+	3.默认的usb_cam-test.launch文件
+<launch>
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
+        <param name="camera_frame_id" value="usb_cam"/>
+        <param name="video_device" value="/dev/video0"/>
+        <param name="image_width" value="640"/>
+        <param name="image_height" value="480"/>
+        <param name="pixel_format" value="yuyv"/>
+        <param name="io_method" value="mmap"/>
+    </node>
+
+
+    <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+        <param name="autosize" value="true"/>
+        <remap from="image" to="/usb_cam/image_raw"/>
+    </node>
+</launch>
+
+	    1.各部分注释，节点"usb_cam"
+	        说明：在"image_view"节点中，订阅了"/usb_cam/image_raw"这个topic；说明<camera_name>已经被设置为"usb_name"；但是在上述launch文件中，可能有2个地方都是设置<camera_name>的，不清楚具体是哪里；可能设置1，<node name="usb_cam"... />（小疑问，在此处指定节点名称，是否等同于设定"camera_name"参数）；可能设置2，"camera_frame_id"参数；
+
+
+	    2.各部分注释，节点"usb_cam"，"pixel_format"参数
+	        说明：使用摄像头的pixel_format默认参数（mjpeg）可能启动失败，因为有的摄像头的pixel_format可能是"yuyv"格式；
+
+
+	    3.各部分注释，节点"image_view"
+	        <remap from="image" to="/usb_cam/image_raw"/>
+	        说明：是否应该是从"/usb_cam/image_raw"映射到"image"；因为"/usb_cam/image_raw"是已经存在的topic；而"image"是节点image_view需要订阅的topic；
+	        命令行写法："image_view"节点如果使用命令行启动，可以使用如下，rosrun image_view image_view image:=/camera/rgb/image_raw；
+
+
+
+
+	4.usb_cam功能包使用
+	    1.安装：
+	        sudo apt-get install ros-kinetic-usb-cam
+
+	    2.启动计算机摄像头
+	        roslaunch usb_cam usb_cam-test.launch
+	        说明；会弹出显示图像的窗口；
+
+
+	    3.其他工具显示图像
+	        终端命令：rqt_image_view
+	        说明：Qt工具箱中的"rqt_image_view"也可以用来显示图像；启动后，在右上角的topic输入框中下拉，找到"/usb_cam/image"这个topic；
+	        关于launch文件：如果使用rqt_image_view工具，则launch文件中，可以删除"image_view"节点的内容；只需要"usb_cam_node"节点即可；
+
+	    4.其他工具显示图像（不确定）
+	        说明：可能还可以rviz中显示，具体没介绍；小疑问，如果使用rviz中显示，可视化插件可能选择Image，topic可能订阅的是"/usb_cam/image_raw"，然后是否在"global option"中需要设置"fixed frame"为camera_frame_id的值，类似Kinect相机中那样吗；
+
+
+
+
+
+
+
+
+
+
+
+【43】.数据类型，Camera功能包
+	1.usb_cam功能包使用（重复）
+	    1.启动摄像头
+	        roslaunch usb_cam usb_cam-test.launch
+	        说明：会弹出显示图像的窗口；上述launch文件共包括2个节点，"usb_cam"节点和"image_view"节点；
+
+	    2.其他工具查看图像
+	        rqt_image_view
+	        说明：在打开的软件中，填入"/usb_cam/image"这个topic即可查看；
+	        数据类型：通过"rostopic list"命令可以查看发布的图像topic为"/usb_cam/image"，通过"rostopic info /usb_cam/image"可得该topic的数据类型是"sensor_msgs/Image"
+
+
+
+	2.数据类型，sensor_msgs/Image
+	    1.rosmsg show sensor_msgs/Image
+	        说明：上述命令可以查看"sensor_msgs/Image"数据类型的具体结构；
+
+	    2."sensor_msgs/Image"类型结构
+std_msgs/Header header
+    uint32 seq
+    time stamp
+    string frame_id
+
+uint32 height
+uint32 width
+string encoding
+unit8 is_bigendian
+uint32 step
+uint8[] data
+
+	    3.数据类型解释（不详细）
+	        header：消息头；（不确定）好像是很多数据类型都包括这个"std_msgs/Header"类型的数据；在发布topic时，不用在程序中主动设置该变量，会自动设置；包括seq（图像的需要）、stamp（时间戳）、frame_id（所在的坐标系？）
+	        height，width：图像的分辨率
+	        encoding：图像的编码格式，包括RGB、YUV等；这里仅是编码格式，不涉及图像压缩格式；
+	        is_bigendian：图像数据的大小端存储模式；
+	        step：一行图像数据的字节数量，作为数据的步长数据，这里使用的摄像头为width*3=1280*3=3840字节；
+	        data：存储图像数据的数组，大小是step*height；根据公式计算，未压缩的图像每帧大小为，3840*720=2 764 800字节，2.7648MB；
+
+
+
+
+	3.数据类型，sensor_msgs/CompressedImage
+	    1.说明：上述摄像头的节点，除了发布"sensor_msgs/Image"类型的topic，还发布压缩后的数据类型topic，数据类型是"sensor_msgs/CompressedImage"；
+
+	    2.查看数据类型命令：rosmsg show sensor_msgs/CompressedImage；
+
+	    3."sensor_msgs/CompressedImage"结构类型
+std_msgs/Header header
+    uint32 seq
+    time stamp
+    string frame_id
+
+string format
+uint8[] data
+
+
+	    4.数据类型解释（不详细）
+	        format：图像的压缩编码格式，包括PNG、JPEG、BMP等；
+	        data：存储图像数据的数组；
+
+
+
+
+
+
+
+
+
+
+【44】.Kinect功能包
+	说明：Kinect在Linux下有两种开源的驱动包，即OpenNI和Freenect；ROS针对这两个驱动包也有相应的功能包，即openni_camera和freenect_camera；下面介绍freenet_camera功能包的使用；
+
+
+	1.freenect_camera功能包，发布的topic
+	    名称，rgb/camera_info；数据类型，sensor_msgs/CameraInfo；
+	    名称，rgb/image_raw；数据类型，sensor_msgs/Image；
+	        说明：RGB相机的校准信息；
+	        说明：RGB相机的图像数据；
+
+
+	    名称，depth/camera_info；数据类型，sensor_msgs/CameraInfo；
+	    名称，depth/image_raw；数据类型，sensor_msgs/Image；
+	        说明：深度相机校准信息；
+	        说明：深度相机图像信息；
+
+
+	    名称，depth_registered/camera_info；数据类型，sensor_msgs/CameraInfo；
+	    名称，depth_resigtered/image_raw；数据类型，sensor_msgs/Image；
+	        说明：配准后的深度相机校准信息；
+	        说明：配准后的深度相机图像信息；
+
+
+	    名称，ir/camera_info；数据类型，sensor_msgs/CameraInfo；
+	    名称，ir/image_raw；数据类型，sensor_msgs/Image；
+	        说明：红外相机校准信息；
+	        说明：红外相机数据；
+
+
+	    名称，projector/camera_info；数据类型，sensor_msgs/CameraInfo；
+	        说明：深度相机校准信息；
+
+
+	    名称，/diagnostics；数据类型，diagnostics_msgs/DiagnosticsArray；
+	        说明：传感器诊断信息；
+
+
+
+
+	2.freenect_camera功能包，提供的service
+	    名称，rgb/set_camera_info；数据类型，sensor_msgs/SetCameraInfo；
+	        说明：设置RGB相机校准信息；
+
+	    名称，ir/set_camera_info；数据类型，sensor_msgs/SetCameraInfo；
+	        说明：设置红外相机校准信息；
+
+
+
+
+	3.freenect_camera功能包，提供的parameter server
+	    说明：可以在launch文件中设置参数；
+
+	    1.参数，~device_id；数据类型，string；默认值，"#1"
+	        说明：设备号；小疑问，也是与普通相机类似的，是指linux系统中/etc/路径下当前可选的设备吗；
+
+	    2.参数，~rgb_frame_id；数据类型，string；默认值，"/openni_rgb_optical_frame"
+	        说明：RGB相机的坐标系？
+
+	    3.参数，~depth_frame_id；数据类型，string；默认值，"/openni_depth_optical_frame"
+	        说明：红外/深度相机坐标系？
+
+	    4.参数，~rgb_camera_info_url；数据类型，string；默认值，"file://$(ROS_HOME)/camera_info/$(NAME).yaml"
+	        说明：RGB相机的校准文件路径；
+
+	    5.参数，~depth_camera_info_url；数据类型，string；默认值，"file://$(ROS_HOME)/camera_info/$(NAME).yaml"
+	        说明：深度相机校准文件路径；
+
+	    6.参数，~time_out；数据类型，double；默认值，无
+	        说明：产生数据的超时时间值；
+
+	    7.参数，~debug；数据类型，bool；默认值，"false"
+	        说明：调试信息使能；
+
+	    8.参数，enable_rgb_diagnostics；数据类型，bool；默认值，"false"
+	        说明：RGB相机诊断使能；
+
+	    9.参数，enable_depth_diagnostics；数据类型，bool；默认值，"false"
+	        说明：深度相机诊断使能；
+
+	    10.参数，enable_ir_diagnostics；数据类型，bool；默认值，"false"
+	        说明：红外相机诊断使能；
+
+	    11.参数，diagnostics_max_frequency；数据类型，double；默认值，30.0（Hz）
+	        说明：诊断信息发布的最大频率；
+
+
+	    12.参数，diagnostics_min_frequency；数据类型，double；默认值，30.0（Hz）
+	        说明：诊断信息发布的最小频率；
+
+
+	    13.参数，diagnostics_tolerance；数据类型，double；默认值，0.05
+	        说明：诊断信息发布频率的允许误差；
+
+
+	    14.参数，diagnostics_window_time；数据类型，double；默认值，5.0
+	        小疑问：说是焦距？（非自动对焦状态下有效）
+
+	    15.参数，~image_mode；数据类型，int；默认值，2；
+	        说明：RGB相机输出图像模式；取值1，SXGA模式，分辨率1280*1024；取值2，VGA模式，分辨率640*480；
+
+
+	    16.参数，~depth_mode；数据类型，int；默认值，2；
+	        说明：深度相机输出图像模式；取值1，SXGA模式，分辨率1280*1024；取值2，VGA模式，分辨率640*480；
+
+	    17.参数，~depth_registeration；数据类型，bool；默认值，"true"
+	        说明：深度相机配准使能；
+
+
+	    18.参数，~data_skip；数据类型，int；默认值，0；
+	        说明：每次发布图像跳过的帧数；取值0-10；
+
+
+	    19.参数，~image_time_offset；数据类型，double；默认值，0.0；
+	        说明：RGB图像数据的时间偏移量；取值-1.0~1.0；
+
+
+	    20.参数，~depth_time_offset；数据类型，double；默认值，0.0；
+	        说明：深度相机数据的时间偏移量；取值-1.0~1.0；
+
+
+	    21.参数，~depth_ir_offset_x；数据类型，double；默认值，5.0；
+	        说明：红外图像与深度图像之间的x偏移量；取值-10.0~10.0；
+
+
+	    22.参数，~depth_ir_offset_y；数据类型，double；默认值，4.0；
+	        说明：红外图像与深度图像之间的y偏移量；取值-10.0~10.0；
+
+
+	    23.参数，~z_offset_mm；数据类型，int；默认值，0（mm）
+	        说明：Z轴数据偏移量；取值-50~50；
+
+
+
+
+	4.freenect_camera功能包，launch文件
+	    说明：自行新建launch文件如下，"mrobot_bringup/launch/freenect.launch"文件；
+<launch>
+    <include file="$(find freenet_launch)/launch/freenect.launch">
+        <arg name="publish_tf"		value="false"/>
+        <arg name="depth_registeration"	value="true"/>
+        <arg name="rgb_processing"		value="true"/>
+        <arg name="ir_processing"		value="false"/>
+        <arg name="depth_processing"		value="false"/>
+        <arg name="depth_registered_processing" value="true"/>
+        <arg name="disparity_processing"	value="false"/>
+        <arg name="disparity_registered_processing" value="false"/>
+        <arg name="sw_registered_processing"	value="false"/>
+        <arg name="hw_registered_processing"	value="true"/>
+    </include>
+</launch>
+
+	    说明：此处没有展开原始freenect.launch文件，未知具体启动了哪些节点？上述参数与parameter server的参数不同；这些参数是int main(int argc, char **argv)中输入的参数；小疑问，但是，有一个参数好像与parameter server中的同名了"depth_registeration"，是同一个参数吗；
+
+	    关于"depth_registeration"参数：需要设置为"true"，用于将深度相机图像与RGB相机图像配准，减少偏移量；
+
+
+
+	4.freenect_camera功能包，使用
+	    1.安装
+	        sudo apt-get install ros-kinetic-freenect-*
+
+
+	    2.启动Master
+	        roscore
+	
+	    3.启动freenect
+	        roslaunch mrobot_bringup freenect.launch
+	        说明：这个是上述自行修改的launch文件；也可以使用freenect功能包默认提供的launch文件；
+
+	        roslaunch freenect_launch freenect.launch
+	        说明：freenect功能包默认提供的launch文件；
+
+
+	    4.rviz查看，启动rviz
+	        rosrun rviz rviz
+
+	    5.rviz查看，rviz软件中（重复，前面已描述，简要描述）
+	        说明：在rviz软件中，点击左侧栏中的"Add"按钮，可以添加可视化插件，选择"PointCloud2"类型；在rviz软件左侧栏中，"Global Option"项展开，修改其中的"Fixed Frame"项值为"camera_rgb_optical_frame"；"PointCloud2"项展开，修改其中的"Topic"项的值为"/camera/depth_registered/points"
+	        小疑问：Kinect发布的topic名由哪个参数决定吗，上面原始的topic名是"depth_registered/camera_raw"，意思是freenet.launch文件中重映射了吗；然后，为何只订阅depth有关的topic，Kinect发布的topic包括"rgb/camera_raw"，"depth_registered/camera_raw"，"ir/camera_raw"；
+	        小疑问：参数服务器中"depth_frame_id"，默认值"/openni_rgb_optical_frame"（与上述"camera_rgb_optical_frame"不同，是在launch文件中重新设置了吗）；参数服务器中"rgb_frame_id"，默认值"/openni_depth_optical_frame"；然后，为何topic使用的是depth的，fixed frame使用的是camera的；
+
+	        "Color Transformer"项：在"PointCloud2"插件展开，"Color Transformer"项默认值为"RGBB"，即显示正常的彩色图像，可以用鼠标拖动显示三维情况；如果该项值修改为"AxisColor"，则设置为通过颜色表示点云深度；
+
+
+
+
+	5.可能问题描述，找不到Kinect
+	    问题说明1：使用launch文件启动freenect功能包的节点后，提示"No devices connected... waiting for devices to be connected"；原因可能是驱动识别异常，手动下载重装驱动步骤如下；（小疑问，哪个驱动吗，freenect功能包不是就是驱动吗）
+
+	    步骤：
+	        git clone https://github.com/avin2/SensorKinect.git
+	        cd SensorKinect/Bin
+	        tar xvf SensorKinect093-Bin-Linux-x86-v5.1.2.1.tar.bz2
+	        sudo ./install.sh
+
+
+	    查看是否识别Kinect：
+	        说明：终端输入，lsusb，可以显示当前所有可用的设备；如果识别到Kinect，会有一条"Microsoft Corp. Kinect for Windows NUI Motor"
+
+
+	    问题说明2：在使用launch文件启动freenect各节点后，终端中输出的内容中会有一条，"Stopping device RGB and Depth stream flush"，可以忽略，不影响使用；
+
+
+
+
+
+
+
+
+
+【45】.数据类型，Kinect功能包
+	1.Kinect功能包使用（重复）
+	    roslaunch freenect_launch freenect.launch
+	    rosrun rviz rviz
+	    说明：kinect发布的图像topic包括，彩色相机图像（rgb/image_raw），深度相机图像（depth_resigtered/image_raw），红外相机图像（ir/image_raw）；在rviz软件中，只显示了深度相机图像，"camera/depth_registered/points"，该topic的数据类型是"sensor_msgs/PointCloud2"；
+
+
+
+	2.数据类型，"sensor_msgs/PointCloud2"
+	    1.查看数据类型定义：
+	        rostopic info camera/depth_registered/points，返回"sensor_msgs/PointCloud2"
+	        rosmsg show sensor_msgs/PointCloud2，返回数据类型定义，内容如下
+
+	    2."sensor_msgs/PointCloud2"数据类型
+std_msgs/Header header
+    uint32 seq
+    time stamp
+    string frame_id
+
+uint32 height
+uint32 width
+
+sensor_msgs/PointField[] fields
+    uint8 INT8=1
+    uint8 UINT8=2
+    uint8 INT16=3
+    uint8 UINT16=4
+    uint8 INT32=5
+    uint8 UINT32=6
+    uint8 FLOAT32=7
+    uint8 FLOAT64=8
+    string name
+    uint32 offset
+    uint8 datatype
+    uint32 count
+
+bool is_bigendian
+uint32 point_step
+uint32 row_step
+uint8[] data
+bool is_dense
+
+
+	    3.数据类型解释（不详细）
+	        height，width：点云图像分辨率
+	        fields：每个点的数据类型
+	        is_bigendian：数据的大小端存储模式
+	        point_step：单点数据的字节步长
+	        row_step：一列数据的字节步长
+	        data：点云数据的存储数组，总字节大小为，row_step*height
+	        is_dense：是否无效点
+
+
+
+
+
+
+
+
+
+
+【46】.rplidar平面激光雷达功能包
+	1.杂
+	    rplidar功能包：此处介绍SLAMTEC公司的低成本激光雷达，rplidar A1；ROS中有对应的功能包，rplidar；该激光雷达可以最快10Hz的频率360度范围内扫描，最远检测距离6m；
+	    rplidar激光雷达：树莓派的USB最大输出电流是1.2A；rplidar激光雷达的启动电流需要1.5A，所以热插拔rplidar会导致系统重启，最好使用外部供电的USB hub；
+
+
+	2.rplidar功能包，topic与service
+	    1.发布的topic
+	        名称，/scan；数据类型，sensor_msgs/LaserScan；
+	        说明：就是激光雷达的扫描数据；小疑问，topic名称是固定的吗，与参数设置无关吗
+
+	    2.提供的service
+	        名称，stop_motor；数据类型，std_srvs/Empty；描述，停止转动电机；
+
+	        名称，start_motor；数据类型，std_srvs/Empty；描述，开始转动电机；
+
+
+
+	3.rplidar功能包，参数服务器
+	    名称，serial_port；数据类型，string；默认值，"/dev/tty/USB0"
+	        说明：激光雷达串口的名字；小疑问，需要与激光雷达连接的USB口对应吗，就是用了哪个USB口，就修改成对应的值；
+
+
+	    名称，serial_bandrate；数据类型，int；默认值，"115200"；
+	        说明：设置串口波特率；
+
+
+	    名称，frame_id；数据类型，string；默认值，"laser"
+	        说明：激光雷达坐标系？小疑问，该参数的作用？因为激光雷达发布扫描信息的topic名称是固定的，"/scan"
+
+	    名称，inverted；数据类型，bool；默认值，"false"
+	        说明：是否倒置安装；
+
+	    名称，angle_compensate；数据类型，bool；默认值，"false"
+	        说明：角度补偿；
+
+
+
+
+	4.rpliar功能包，使用
+	    1.安装
+	        sudo apt-get install ros-kinetic-rplidar-ros
+
+	    2.启动rplidar功能包节点
+	        rosrun rplidar_ros rplidarNode
+
+	    3.查看激光雷达数据的topic
+	        rostopic -list
+	        说明：返回信息中应该有"/scan"
+
+	    4.直接终端显示topic内容
+	        rostopic echo /scan
+	        说明：会输出每个扫描的距离值；
+
+	    5.使用rviz查看
+	        rosrun rviz rviz
+	        说明：在rviz软件左侧栏中，修改"Global Options"中的"Fixed Frame"为"laser"；小疑问，对应上面参数服务器中的"frame_id"，具体含义是怎样；好像与普通摄像头，Kinect摄像头的使用步骤对应，都需要设置"Fixed Frame"项，内容一般是parameter service中设置的frame_id之类变量，但具体含义未知；
+
+	        说明：在rviz软件左侧栏中，点击"Add"按钮，添加"LaserScan"可视化插件；然后展开左侧栏中的"LaserScan"项，在"topic"项中填入"/scan"；
+
+
+	    6.使用rviz查看2
+	        roslaunch rplidar_ros view_rplidar.launch
+	        说明：也可以直接使用view_rplidar.launch来启动rviz节点（小疑问，该launch文件好像只包含rviz节点的启动；所以上述的"rosrun rplidar_ros rplidarNode"命令同样需要）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
